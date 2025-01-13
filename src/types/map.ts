@@ -97,7 +97,7 @@ geometry: GeoJSON.Geometry;
 
 export interface FeatureCollection {
 type: 'FeatureCollection';
-features: MapFeature[];
+features: Array<Feature>;
 }
 
 export interface HoveredFeature {
@@ -132,4 +132,24 @@ export interface MapControlsStyleOption {
   value: string;
   icon: React.ReactNode;
   action?: () => void;
+}
+export interface Feature {
+  type: "Feature";
+  properties: {
+    id: string;
+    lng: number;
+    lat: number;
+    name: string;
+    hiddenAnchor?: boolean;
+    noHover?: boolean;
+    description?: string;
+    style?: any;  // Define more specific type if needed
+    image?: string;
+    url?: string;
+    details?: ProjectDetails;
+  };
+  geometry: {
+    type: "Point" | "Polygon" | "LineString";
+    coordinates: number[] | number[][] | number[][][];
+  };
 }

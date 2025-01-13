@@ -5,8 +5,10 @@ import dynamic from 'next/dynamic';
 import Script from 'next/script';
 import Header from '@/components/Layout/Header';
 import Loader from '@/components/Loader';
+import { ToastContainer } from 'react-toastify';
 
-const MapComponent = dynamic(() => import('@/components/Map/MapContainer'), {
+
+const MapComponent = dynamic(() => import('@/components/GlobeMap'), {
   ssr: false,
 });
 
@@ -39,6 +41,7 @@ export default function Home() {
       />
         <Loader showLoader={!mapboxLoaded} />
         <Header />
+        <ToastContainer />
         <MapComponent />
     </main>
   );

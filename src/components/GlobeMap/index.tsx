@@ -2,66 +2,78 @@
 import React, { useRef, useCallback, useReducer, useState, useEffect } from "react";
 import dynamic from 'next/dynamic';
 import Map, { MapRef } from "react-map-gl";
-import { MAP_DATA } from "@/data/data";
-import MapControls from "@/components/Map/MapControls";
+import MapControls from "./MapControls";
 import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
 import { ANIMATION_CONFIG } from "@/styles/mapStyles";
-import { MapState, MapAction } from "@/types/map";
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useMapData } from "@/hooks/useMapData";
+
+// Types
+interface Project {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  description?: string;
+  hideMarker: boolean;
+  zoom: number;
+  details?: {
+    location?: string;
+    image?: string;
+    url?: string;
+    description?: string;
+  };
+  polygons: Array<{
+    id: string;
+    name: string;
+    type: string;
+    coordinates: string;
+    minZoom?: number;
+    maxZoom?: number;
+    style?: {
+      fillColor?: string;
+      hoverFillColor?: string;
+      fillOpacity?: number;
+      hoverFillOpacity?: number;
+      lineColor?: string;
+      lineWidth?: number;
+      lineOpacity?: number;
+      lineDashArray?: string;
+    };
+  }>;
+  style?: {
+    fillColor?: string;
+    hoverFillColor?: string;
+    fillOpacity?: number;
+    hoverFillOpacity?: number;
+    lineColor?: string;
+    lineWidth?: number;
+    lineOpacity?: number;
+    lineDashArray?: string;
+  };
+}
+
+interface MapState {
+  showText: boolean;
+  mapLoaded: boolean;
+  showGoogleLayer: boolean;
+  viewState: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+  };
+}
+
+type MapAction =
+  | { type: 'SET_MAP_LOADED'; payload: boolean }
+  | { type: 'TOGGLE_TEXT'; payload: boolean }
+  | { type: 'TOGGLE_GOOGLE_LAYER'; payload: boolean }
+  | { type: 'UPDATE_VIEW_STATE'; payload: MapState['viewState'] };
 
 // Dynamic imports
-const ProjectPolygons = dynamic(() => import('@/components/Map/ProjectPolygons'), { ssr: false });
-const ProjectsMarker = dynamic(() => import('@/components/Map/ProjectMarker'), { ssr: false });
+const ProjectPolygons = dynamic(() => import('@/components/GlobeProjects/ProjectPolygons'), { ssr: false });
+const ProjectsMarker = dynamic(() => import('@/components/GlobeProjects/ProjectMarker'), { ssr: false });
+const ProjectList = dynamic(() => import('@/components/GlobeProjects/ProjectList'), { ssr: false });
 const MeteorBackground = dynamic(() => import('./MeteorBackground'), { ssr: false });
-
-const ProjectList = ({ 
-  projects, 
-  onSelect,
-  isOpen,
-  setIsOpen
-}: { 
-  projects: typeof MAP_DATA,
-  onSelect: (id: string) => void,
-  isOpen: boolean,
-  setIsOpen: (open: boolean) => void
-}) => {
-  return (
-    <div className="absolute top-4 right-4 z-10 w-[300px]">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-white/90 rounded-lg shadow-lg hover:bg-white/100 transition-all"
-      >
-        <span className="text-sm font-medium">Project List</span>
-        {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-      </button>
-
-      {isOpen && (
-        <div className="mt-2 bg-white/90 rounded-lg shadow-lg max-h-[400px] overflow-y-auto backdrop-blur-sm">
-          {projects.map((project) => {
-            if(project.showInList === false) return null;
-            return (
-              <button
-              key={project.id}
-              onClick={() => {
-                onSelect(project.id);
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 hover:bg-black/5 transition-colors border-b border-gray-100 last:border-0"
-            >
-              <h3 className="text-sm font-medium mb-1">{project.name}</h3>
-              {/* {project.description && (
-                <p className="text-xs text-gray-600 line-clamp-2">
-                  {project.description}
-                </p>
-              )} */}
-            </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Reducer
 function mapReducer(state: MapState, action: MapAction): MapState {
@@ -72,8 +84,6 @@ function mapReducer(state: MapState, action: MapAction): MapState {
       return { ...state, showText: action.payload };
     case 'TOGGLE_GOOGLE_LAYER':
       return { ...state, showGoogleLayer: action.payload };
-    // case 'SET_CURRENT_PROJECT':
-    //   return { ...state, currentProject: action.payload };
     case 'UPDATE_VIEW_STATE':
       return { ...state, viewState: action.payload };
     default:
@@ -81,7 +91,8 @@ function mapReducer(state: MapState, action: MapAction): MapState {
   }
 }
 
-export default function InteractiveMap() {
+const InteractiveMap: React.FC = () => {
+  const { mapData, loading, error } = useMapData();
   const mapRef = useRef<MapRef>(null);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showPolygons, setShowPolygons] = useState(false);
@@ -89,7 +100,6 @@ export default function InteractiveMap() {
   const [state, dispatch] = useReducer(mapReducer, {
     showText: true,
     mapLoaded: false,
-    // currentProject: null,
     showGoogleLayer: true,
     viewState: MAP_CONFIG.initialViewState
   });
@@ -102,15 +112,14 @@ export default function InteractiveMap() {
 
     const currentZoom = mapboxMap.getZoom();
 
-    // Update visibility based on zoom level
     if (currentZoom >= 8) {
       setShowMarkers(false);
       setShowPolygons(true);
-      setShowMeteor(false)
+      setShowMeteor(false);
     } else {
       setShowMarkers(true);
       setShowPolygons(false);
-      setShowMeteor(true)
+      setShowMeteor(true);
     }
   }, []);
 
@@ -136,7 +145,6 @@ export default function InteractiveMap() {
     const addLayer = () => {
       if (mapboxMap.getSource('google-satellite')) return;
 
-      // Add source
       mapboxMap.addSource('google-satellite', {
         type: 'raster',
         tiles: [`https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}`],
@@ -145,13 +153,11 @@ export default function InteractiveMap() {
         maxzoom: 20,
       });
 
-      // Find the first symbol layer to insert before
       const style = mapboxMap.getStyle();
       const firstSymbolLayer = style?.layers?.find(
         layer => layer.type === 'symbol'
       )?.id;
 
-      // Add layer at the bottom
       mapboxMap.addLayer({
         id: 'google-satellite-layer',
         type: 'raster',
@@ -199,26 +205,25 @@ export default function InteractiveMap() {
     }
   }, [state.showGoogleLayer]);
 
-  // Event Handlers
   const handleMapLoad = useCallback(() => {
     dispatch({ type: 'SET_MAP_LOADED', payload: true });
     addGoogleMapLayer();
   }, [addGoogleMapLayer]);
 
   const handleChangeLocation = useCallback((id: string) => {
-    const area = MAP_DATA.find((area) => area.id === id);
+    const project = mapData.find((p) => p.id === id);
     const map = mapRef?.current;
     
-    if (!area || !map) return;
+    if (!project || !map) return;
     
     map.flyTo({
-      center: [area.lng, area.lat],
-      zoom: area.zoom,
+      center: [project.lng, project.lat],
+      zoom: project.zoom,
       duration: 3000,
     });
     
-    dispatch({ type: 'TOGGLE_TEXT', payload: area.zoom === 1 });
-  }, []);
+    dispatch({ type: 'TOGGLE_TEXT', payload: project.zoom === 1 });
+  }, [mapData]);
 
   const spinGlobe = useCallback(() => {
     const mapboxMap = mapRef?.current?.getMap();
@@ -244,15 +249,11 @@ export default function InteractiveMap() {
     }
   }, []);
 
-
-   // Add zoom change handler to map
-   useEffect(() => {
+  useEffect(() => {
     const mapboxMap = mapRef?.current?.getMap();
     if (!mapboxMap) return;
 
     mapboxMap.on('zoom', handleZoomChange);
-
-    // Initial check
     handleZoomChange();
 
     return () => {
@@ -260,10 +261,20 @@ export default function InteractiveMap() {
     };
   }, [handleZoomChange]);
 
+  if (error) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Map Data</h2>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="m-0" id="map-page">
       {showMeteor && <MeteorBackground />}
-      {/* Map Container */}
       <div className="absolute top-0 h-screen w-full z-0">
         <Map
           ref={mapRef}
@@ -272,44 +283,34 @@ export default function InteractiveMap() {
           mapboxAccessToken={MAPBOX_TOKEN}
           onLoad={handleMapLoad}
           onIdle={spinGlobe}
-          projection={{
-            name: 'globe'
-          }}
+          projection={{ name: 'globe' }}
           onZoom={handleZoomChange}
         >
-            {showPolygons && <ProjectPolygons />}
-            {showMarkers && <ProjectsMarker handleClick={handleChangeLocation} />}
-            <MapControls 
-              showGoogleLayer={state.showGoogleLayer}
-              toggleGoogleLayer={toggleGoogleLayer}
-              handleZoomOut={handleZoomOut}
-              isZoomedOut={state.showText}
-              mapBox={mapRef} // not used for now but will keep it for future use
-              showMarkers={showMarkers}
-              showPolygons={showPolygons}
-              setShowMarkers={setShowMarkers}
-              setShowPolygons={setShowPolygons}
-            />
-          {/* Project List Dropdown */}
+          {showPolygons && <ProjectPolygons projects={mapData} />}
+          {showMarkers && <ProjectsMarker handleClick={handleChangeLocation} projects={mapData} />}
+          
+          <MapControls 
+            showGoogleLayer={state.showGoogleLayer}
+            toggleGoogleLayer={toggleGoogleLayer}
+            handleZoomOut={handleZoomOut}
+            isZoomedOut={state.showText}
+            mapBox={mapRef}
+            showMarkers={showMarkers}
+            showPolygons={showPolygons}
+            setShowMarkers={setShowMarkers}
+            setShowPolygons={setShowPolygons}
+          />
           <ProjectList
-            projects={MAP_DATA}
+            projects={mapData}
             onSelect={handleChangeLocation}
             isOpen={isProjectListOpen}
             setIsOpen={setIsProjectListOpen}
+            loading={loading}
           />
         </Map>
-
-        
       </div>
-      
-      {/* Project Details Modal */}
-      {/* <ProjectDetails
-        data={state.currentProject}
-        toggleProject={() => dispatch({ 
-          type: 'SET_CURRENT_PROJECT', 
-          payload: null 
-        })}
-      /> */}
     </div>
   );
-}
+};
+
+export default InteractiveMap;

@@ -1,48 +1,35 @@
 
-//https://docs.mapbox.com/playground/directions/?coordinates=46.82299171435546%2C24.93020052320092&coordinates=46.701623240912774%2C24.96578164847707
-
-// Primary Colors 
-// teal #008080
-// soft Green #4CAF50
-
-// Secondary Colors
-// Orange-Red: #FF4500 
-// Light Purple: #9370DB
-
-
-import { FeatureCollection } from "@/types/map";
-
-export const ProjectsData: FeatureCollection = {
-  type: "FeatureCollection",
-  features: [
+export const ProjectsData = {
+  "type": "FeatureCollection",
+  "features": [
     {
-      type: "Feature",
-      properties: {
-        id: 'hassan-allam',
-        lng: 30.0764979,
-        lat: 31.456941,
-        name: 'Hassan Allam Properties',
-        hiddenAnchor: false,
-        noHover: false,
-        description: "Construction Center",
-        image: "/hassan-allam.png",
-        url: "https://dpproductions.net/VT/HAP-SLR/",
-        details: {
-          Location: "New Cairo",
-          Department: "Construction Center",
+      "type": "Feature",
+      "properties": {
+        "id": "hassan-allam",
+        "lat": 30.0764979,
+        "lng": 31.456941,
+        "name": "Hassan Allam Properties",
+        "hiddenAnchor": false,
+        "noHover": false,
+        "description": "Construction Center",
+        "image": "/hassan-allam.png",
+        "url": "https://dpproductions.net/VT/HAP-SLR/",
+        "details": {
+          "Location": "New Cairo",
+          "Department": "Construction Center"
         },
-        style: {
-          paint: {
+        "style": {
+          "paint": {
             "fill-color": "#FF4500",
             "hover-fill-color": "#FF4500",
-            "fill-opacity": .4,
-            "hover-fill-opacity": 0.6,
-          },
-        },
+            "fill-opacity": 0.4,
+            "hover-fill-opacity": 0.6
+          }
+        }
       },
-      geometry: {
-        type: "Polygon",
-        coordinates: [
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
           [
             [
               31.45252050716178,
@@ -154,29 +141,29 @@ export const ProjectsData: FeatureCollection = {
             ]
           ]
         ]
-      },
+      }
     },
     {
-      type: "Feature",
-      properties: {
-        id: 'cairo-airport',
-        lng: 31.44019163699346,
-        lat: 30.09130434647423,
-        name: 'Cairo Airport',
-        hiddenAnchor: true,
-        noHover: false,
-        style: { 
-          paint: {
+      "type": "Feature",
+      "properties": {
+        "id": "cairo-airport",
+        "lng": 31.44019163699346,
+        "lat": 30.09130434647423,
+        "name": "Cairo Airport",
+        "hiddenAnchor": true,
+        "noHover": false,
+        "style": {
+          "paint": {
             "fill-color": "#9370DB",
             "hover-fill-color": "#9370DB",
             "fill-opacity": 0.2,
-            "hover-fill-opacity": 0.3,
-          },
-        },
+            "hover-fill-opacity": 0.3
+          }
+        }
       },
-      geometry: {
-        type: "Polygon",
-        coordinates: [
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
           [
             [
               31.44019163699346,
@@ -368,43 +355,47 @@ export const ProjectsData: FeatureCollection = {
             ]
           ]
         ]
-      },
+      }
     },
     {
-      type: "Feature",
-      properties: {
-        id: 'suez-road',
-        lng: 29.883333,
-        lat: 31.200001,
-        name: 'Suez Road',
-        hiddenAnchor: true,
-        noHover: false,
-        style: {
-          background: {
-            type: "line",
-            paint: {
-              'line-color': 'green', // yellow
-              'line-width': 6,
-              'line-opacity': 0.4
+      "type": "Feature",
+      "properties": {
+        "id": "suez-road",
+        "lng": 29.883333,
+        "lat": 31.200001,
+        "name": "Suez Road",
+        "hiddenAnchor": true,
+        "noHover": false,
+        "style": {
+          "background": {
+            "type": "line",
+            "paint": {
+              "line-color": "green",
+              "line-width": 6,
+              "line-opacity": 0.4
             },
-            layout: {
-              'line-cap': 'round',
-              'line-join': 'round'
+            "layout": {
+              "line-cap": "round",
+              "line-join": "round"
             }
           },
-          dashed: {
-            type: "line",
-            paint: {
-              'line-color': '#FFD700',
-              'line-width': 6,
-              'line-dasharray': [0, 4, 3]
+          "dashed": {
+            "type": "line",
+            "paint": {
+              "line-color": "#FFD700",
+              "line-width": 6,
+              "line-dasharray": [
+                0,
+                4,
+                3
+              ]
             }
           }
-        },
+        }
       },
-      geometry: {
-        type: "LineString",
-        coordinates: [
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
           [
             31.37427366824238,
             30.078827362965512
@@ -474,8 +465,40 @@ export const ProjectsData: FeatureCollection = {
             30.103928263009635
           ]
         ]
-      },
-
-    }
-  ],
+      }
+    },
+  ]
 };
+
+export const MAP_DATA = [
+  {
+    "name": "Globe",
+    "id": "globe",
+    "lat": 30.0764406,
+    "lng": 31.4596637,
+    "zoom": 1,
+    "showInList": false
+  },
+  {
+    "name": "Saudi Arabia",
+    "id": "saudi-arabia",
+    "lat": 24.774265,
+    "lng": 46.738586,
+    "zoom": 5
+  },
+  {
+    "name": "Egypt",
+    "id": "egypt",
+    "lat": 26.820553,
+    "lng": 30.802498,
+    "zoom": 5,
+    "showInList": true
+  },
+  {
+    "name": "Hassan Allam",
+    "id": "hassan-allam",
+    "lat": 30.0764406,
+    "lng": 31.4596637,
+    "zoom": 14
+  }
+];
