@@ -134,17 +134,19 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
           <Grid size={{ xs: 12 }}>
             <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Polygons</Typography>
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={() => setMode(MODES.DRAW)}
-              >
-                Draw Polygon
-              </Button>
+              <Typography variant="h6">Project Polygon</Typography>
+              {!formData.polygon && (
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => setMode(MODES.DRAW)}
+                >
+                  Draw Polygon
+                </Button>
+              )}
             </Grid>
-            {formData.polygons.map((polygon) => (
-              <Accordion key={polygon.id}>
+            {formData.polygon && (
+              <Accordion>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Box sx={{ 
                     display: 'flex', 
@@ -155,41 +157,35 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   }}>
                     <Box>
                       <Typography color="text.secondary" variant="body2">
-                        {polygon.name}
+                        {formData.polygon.name}
                       </Typography>
                       <Typography color="text.secondary" variant="body2">
-                        {polygon.type as unknown as string} 
+                        {formData.polygon.type} 
                       </Typography>
                     </Box>
-                   
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
-                <Button
-                      color="error"
-                      size="small"
-                      title='Delete Polygon'
-                      startIcon={<DeleteIcon />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateFormData('polygons', formData.polygons.filter(p => p.id !== polygon.id));
-                      }}
-                    > 
+                  <Button
+                    color="error"
+                    size="small"
+                    title='Delete Polygon'
+                    startIcon={<DeleteIcon />}
+                    onClick={() => updateFormData('polygon', null)}
+                  > 
                     Delete Polygon 
-                    </Button>
-
+                  </Button>
                   <PolygonForm
-                    polygon={polygon}
+                    polygon={formData.polygon}
                     onStartEditing={handleStartEditing}
-                    handlePolygonUpdate={(polygonId, updates) => {
-                      updateFormData('polygons', formData.polygons.map(p => p.id === polygonId ? { ...p, ...updates } : p));
+                    handlePolygonUpdate={(_, updates) => {
+                      updateFormData('polygon', { ...formData.polygon, ...updates });
                     }}
                   />
                 </AccordionDetails>
               </Accordion>
-            ))}
+            )}
           </Grid>
-          
           
 
         <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>

@@ -37,7 +37,7 @@ export interface ProjectFormData {
   lng: number | string;
   zoom: number;
   hideMarker: boolean;
-  polygons: Polygon[];
+  polygon: Polygon | null;
 }
 
 const MapPin = () => (
@@ -90,7 +90,7 @@ export default function DrawMap() {
     lng: "",
     zoom: 8,
     hideMarker: false,
-    polygons: [],
+    polygon: null,
   };
 
   const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
@@ -105,7 +105,11 @@ export default function DrawMap() {
   const handleDrawCreate = useCallback(
     ({ features }: { features: Feature[] }) => {
       const feature = features[0];
-      const newPolygon: Partial<Polygon> = {
+      if (formData.polygon) {
+        return;
+      }
+  
+      const newPolygon: Polygon = {
         id: `polygon-${Date.now()}`,
         name: `New ${feature.geometry.type}`,
         type: feature.geometry.type,
@@ -126,15 +130,14 @@ export default function DrawMap() {
               noHover: false,
             },
       };
-
-      setFormData((prev) => ({ 
+  
+      setFormData(prev => ({ 
         ...prev, 
-        polygons: [...prev.polygons, newPolygon as Polygon] 
+        polygon: newPolygon 
       }));
       setMode(MODES.VIEW);
-
     },
-    [setFormData]
+    [setFormData, formData.polygon]
   );
 
   const handleFinishEditing = useCallback(() => {
@@ -145,14 +148,7 @@ export default function DrawMap() {
 
     setFormData((prev) => ({
       ...prev,
-      polygons: prev.polygons.map((polygon) =>
-        polygon.id === editingPolygonId
-          ? {
-              ...polygon,
-              coordinates: JSON.parse(JSON.stringify(editedFeature.geometry.coordinates)),
-            }
-          : polygon
-      ),
+      polygon: formData.polygon
     }));
 
     setEditingPolygonId(null);
@@ -285,7 +281,7 @@ export default function DrawMap() {
       lng: project.lng,
       zoom: project.zoom,
       hideMarker: project.hideMarker,
-      polygons: JSON.parse(JSON.stringify(project.polygons)),
+      polygon: JSON.parse(JSON.stringify(project.polygon)),
     });
 
     setViewport({
@@ -313,12 +309,12 @@ export default function DrawMap() {
     await fetchProjectsData();
   }
 
-  const handleStartEditing = (polygonId: string) => {
-    const polygonToEdit = formData.polygons.find((p) => p.id === polygonId);
+  const handleStartEditing = () => {
+    const polygonToEdit = formData.polygon
     console.log("Polygon to edit:", polygonToEdit);
     if (!polygonToEdit) return;
 
-    setEditingPolygonId(polygonId);
+    setEditingPolygonId(polygonToEdit.id);
     setMode(MODES.VIEW);
 
     try {
@@ -330,7 +326,7 @@ export default function DrawMap() {
           coordinates: JSON.stringify(polygonToEdit.type) === "Polygon" ? [coordinates] : coordinates
         },
         properties: {
-          id: polygonId,
+          id: polygonToEdit.id,
           lat: formData.lat as number,
           lng: formData.lng as number,
           name: polygonToEdit.name,
@@ -340,7 +336,7 @@ export default function DrawMap() {
       };
       console.log("Generated feature:", feature);
 
-      setFeatures({[polygonId]: feature as Feature });
+      setFeatures({[polygonToEdit.id]: feature as Feature });
       setDrawControlKey((prev) => prev + 1);
 
       const getCenter = (coordinates: Feature['geometry']['coordinates']) => {

@@ -3,7 +3,7 @@ import * as React from 'react';
 
 function ControlPanel(props: any) {
   let polygonArea = 0;
-  for (const polygon of props.polygons) {
+  for (const polygon of props.polygon) {
     polygonArea += polygon.properties.area;
   }
 

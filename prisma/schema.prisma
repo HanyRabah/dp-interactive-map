@@ -7,22 +7,6 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-model Project {
-  id          String           @id @default(uuid())
-  name        String
-  lat         Float
-  lng         Float
-  description String?
-  hideMarker  Boolean          @default(false)
-  zoom        Int              @default(12)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  details     ProjectDetails?
-  polygons    ProjectPolygon[]
-
-  @@index([lat, lng])
-}
-
 model ProjectDetails {
   id        String   @id @default(uuid())
   location  String?
@@ -41,24 +25,40 @@ model ProjectPolygon {
   type           String
   coordinates    String
   popupDetails   PopupDetails? @relation(fields: [popupDetailsId], references: [id], onDelete: Cascade)
-  popupDetailsId String? // This should be optional if PopupDetails is optional
+  popupDetailsId String?
   minZoom        Int?
   maxZoom        Int?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  projectId      String
+  projectId      String?       @unique // Made optional with ? and kept @unique
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade) // Made optional with ?
   style          PolygonStyle?
-  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
 
+model Project {
+  id          String          @id @default(uuid())
+  name        String
+  lat         Float
+  lng         Float
+  description String?
+  hideMarker  Boolean         @default(false)
+  zoom        Int             @default(12)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  details     ProjectDetails?
+  polygon     ProjectPolygon? // Optional one-to-one relationship
+
+  @@index([lat, lng])
+}
+
 model PopupDetails {
   id             String           @id @default(uuid())
-  title          String?         
-  image          String?         
-  description    String?         
-  link           String?         
+  title          String?
+  image          String?
+  description    String?
+  link           String?
   type           String
   ProjectPolygon ProjectPolygon[]
 }

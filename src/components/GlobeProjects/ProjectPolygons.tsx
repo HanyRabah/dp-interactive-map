@@ -109,19 +109,18 @@ const ProjectPolygons = ({ projects }: Projects) => {
 
     // Cleanup polygon layers
     projects.forEach(project => {
-      project.polygons.forEach(polygon => {
-        const layerId = `${polygon.id}-layer`;
+      const { id } = project.polygon
+        const layerId = `${id}-layer`;
         try {
           if (map.getLayer(layerId)) {
             map.removeLayer(layerId);
           }
-          if (map.getSource(polygon.id)) {
-            map.removeSource(polygon.id);
+          if (map.getSource(id)) {
+            map.removeSource(id);
           }
         } catch (error) {
-          console.error(`Error cleaning up polygon ${polygon.id}:`, error);
+          console.error(`Error cleaning up polygon ${id}:`, error);
         }
-      });
     });
 
     sourcesRef.current.clear();
@@ -145,8 +144,9 @@ const ProjectPolygons = ({ projects }: Projects) => {
 
     cleanupLayersAndSources();
 
-    projects.forEach((project) => {
-      project.polygons.forEach((polygon) => {
+    projects.forEach((project: Project) => {
+        const { polygon } = project;
+        if(!polygon) return;
         if (polygon.type !== "LineString") return;
 
         try {
@@ -236,7 +236,6 @@ const ProjectPolygons = ({ projects }: Projects) => {
         } catch (error) {
           console.error(`Error adding line layers for ${polygon.id}:`, error);
         }
-      });
     });
 
     return () => {
@@ -247,55 +246,56 @@ const ProjectPolygons = ({ projects }: Projects) => {
   // Render polygon layers
   return (
     <>
-       {projects.map((project) => 
-        project.polygons.map((polygon) => {
-          if (polygon.type === "LineString") return null;
+       {projects.map((project) =>{
+        const { polygon } = project
+        if(!polygon) return
+        if (polygon.type === "LineString") return null;
 
-          const { coordinates } = polygon
-          if (!coordinates) return null;
-          
-          return (
-            <Source 
-              key={polygon.id}
-              id={polygon.id}
-              type="geojson" 
-              data={{
-                type: "Feature",
-                properties: {
-                  id: polygon.id,
-                  name: polygon.name,
-                  style: polygon.style,
-                  projectId: project.id
-                },
-                geometry: {
-                  type: polygon.type,
-                  coordinates: [JSON.parse(coordinates)] 
-                }
+        const { coordinates } = polygon
+        if (!coordinates) return null;
+
+        return (
+          <Source 
+            key={polygon.id}
+            id={polygon.id}
+            type="geojson" 
+            data={{
+              type: "Feature",
+              properties: {
+                id: polygon.id,
+                name: polygon.name,
+                style: polygon.style,
+                projectId: project.id
+              },
+              geometry: {
+                type: polygon.type,
+                coordinates: [JSON.parse(coordinates)] 
+              }
+            }}
+          >
+            <Layer 
+              id={`${polygon.id}-layer`}
+              type="fill"
+              paint={{
+                'fill-color': [
+                  'case',
+                  ['boolean', ['feature-state', 'hover'], false],
+                  polygon.style?.hoverFillColor || '#ff0000', // Hover color
+                  polygon.style?.fillColor || '#00ff00' // Default color
+                ],
+                'fill-opacity': [
+                  'case',
+                  ['boolean', ['feature-state', 'hover'], false],
+                  polygon.style?.hoverFillOpacity || 0.8, // Hover opacity
+                  polygon.style?.fillOpacity || 0.5 // Default opacity
+                ],
+                'fill-outline-color': polygon.style?.fillColor || '#00ff00',
               }}
-            >
-              <Layer 
-                id={`${polygon.id}-layer`}
-                type="fill"
-                paint={{
-                  'fill-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    polygon.style?.hoverFillColor || '#ff0000', // Hover color
-                    polygon.style?.fillColor || '#00ff00' // Default color
-                  ],
-                  'fill-opacity': [
-                    'case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    polygon.style?.hoverFillOpacity || 0.8, // Hover opacity
-                    polygon.style?.fillOpacity || 0.5 // Default opacity
-                  ],
-                  'fill-outline-color': polygon.style?.fillColor || '#00ff00',
-                }}
-              />
-            </Source>
-          );
-        })
-      )}
+            />
+          </Source>
+        );
+
+       } )}
       
       {hoveredTooltip && (
         <motion.div 

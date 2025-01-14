@@ -28,33 +28,6 @@ export default async function handler(
   }
 }
 
-// Previous handleCreate and handleGetAll functions remain the same...
-
-async function handleGetOne(req: NextApiRequest, res: NextApiResponse) {
-  const { id } = req.query;
-  
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid project ID' });
-  }
-
-  const project = await prisma.project.findUnique({
-    where: { id },
-    include: {
-      polygons: {
-        include: {
-          style: true
-        }
-      }
-    }
-  });
-
-  if (!project) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
-
-  return res.status(200).json(project);
-}
-
 async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
   
@@ -62,102 +35,93 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Invalid project ID' });
   }
 
-  const { name, lat, lng, zoom, hideMarker, description, polygons } = req.body;
+  const { name, lat, lng, zoom, hideMarker, description, polygon } = req.body;
 
   try {
-    // First update the project
-    const project = await prisma.project.update({
+    // Update project with nested polygon data
+    const updatedProject = await prisma.project.update({
       where: { id },
       data: {
         name,
         description,
         lat,
         lng,
-        zoom: zoom,
-        hideMarker
-      }
-    });
-
-    // Handle polygon updates if provided
-    if (polygons && Array.isArray(polygons)) {
-      for (const polygon of polygons) {
-        // First upsert the polygon
-        const updatedPolygon = await prisma.projectPolygon.upsert({
-          where: { id: polygon.id },
-          create: {
-            id: polygon.id,
-            name: polygon.name,
-            type: polygon.type,
-            coordinates: polygon.coordinates,
-            description: polygon.description,
-            projectId: project.id,
-            style: polygon.style ? {
-              create: {
-                fillColor: polygon.style.fillColor,
-                hoverFillColor: polygon.style.hoverFillColor,
-                fillOpacity: polygon.style.fillOpacity,
-                hoverFillOpacity: polygon.style.hoverFillOpacity,
-              }
-            } : undefined
-          },
-          update: {
-            name: polygon.name,
-            type: polygon.type,
-            coordinates: polygon.coordinates,
-            description: polygon.description,
-            style: polygon.style ? {
-              upsert: {
+        zoom,
+        hideMarker,
+        // Handle polygon data
+        polygon: polygon === null ? {
+          delete: true // Delete the polygon if null
+        } : polygon ? {
+          upsert: {
+            create: {
+              id: polygon.id,
+              name: polygon.name,
+              type: polygon.type,
+              coordinates: polygon.coordinates,
+              description: polygon.description,
+              style: polygon.style ? {
                 create: {
                   fillColor: polygon.style.fillColor,
                   hoverFillColor: polygon.style.hoverFillColor,
                   fillOpacity: polygon.style.fillOpacity,
                   hoverFillOpacity: polygon.style.hoverFillOpacity,
-                },
-                update: {
-                  fillColor: polygon.style.fillColor,
-                  hoverFillColor: polygon.style.hoverFillColor,
-                  fillOpacity: polygon.style.fillOpacity,
-                  hoverFillOpacity: polygon.style.hoverFillOpacity,
                 }
-              }
-            } : undefined
-          }
-        });
-    
-        // Then handle popup details if it exists
-        if (polygon.popupDetails) {
-          await prisma.popupDetails.upsert({
-            where: { 
-              id: polygon.popupDetailsId || `new-${polygon.id}`  // Make unique fallback ID
-            },
-            create: {
-              title: polygon.popupDetails.title || '',
-              image: polygon.popupDetails.image || '',
-              description: polygon.popupDetails.description || '',
-              link: polygon.popupDetails.link || '',
-              type: polygon.popupDetails.type || 'details',
-              ProjectPolygon: {
-                connect: { id: updatedPolygon.id }
-              }
+              } : undefined,
+              popupDetails: polygon.popupDetails ? {
+                create: {
+                  title: polygon.popupDetails.title || '',
+                  image: polygon.popupDetails.image || '',
+                  description: polygon.popupDetails.description || '',
+                  link: polygon.popupDetails.link || '',
+                  type: polygon.popupDetails.type || 'details',
+                }
+              } : undefined
             },
             update: {
-              title: polygon.popupDetails.title || '',
-              image: polygon.popupDetails.image || '',
-              description: polygon.popupDetails.description || '',
-              link: polygon.popupDetails.link || '',
-              type: polygon.popupDetails.type || 'details'
+              name: polygon.name,
+              type: polygon.type,
+              coordinates: polygon.coordinates,
+              description: polygon.description,
+              style: polygon.style ? {
+                upsert: {
+                  create: {
+                    fillColor: polygon.style.fillColor,
+                    hoverFillColor: polygon.style.hoverFillColor,
+                    fillOpacity: polygon.style.fillOpacity,
+                    hoverFillOpacity: polygon.style.hoverFillOpacity,
+                  },
+                  update: {
+                    fillColor: polygon.style.fillColor,
+                    hoverFillColor: polygon.style.hoverFillColor,
+                    fillOpacity: polygon.style.fillOpacity,
+                    hoverFillOpacity: polygon.style.hoverFillOpacity,
+                  }
+                }
+              } : undefined,
+              popupDetails: polygon.popupDetails ? {
+                upsert: {
+                  create: {
+                    title: polygon.popupDetails.title || '',
+                    image: polygon.popupDetails.image || '',
+                    description: polygon.popupDetails.description || '',
+                    link: polygon.popupDetails.link || '',
+                    type: polygon.popupDetails.type || 'details',
+                  },
+                  update: {
+                    title: polygon.popupDetails.title || '',
+                    image: polygon.popupDetails.image || '',
+                    description: polygon.popupDetails.description || '',
+                    link: polygon.popupDetails.link || '',
+                    type: polygon.popupDetails.type || 'details',
+                  }
+                }
+              } : undefined
             }
-          });
-        }
-      }
-    }
-
-    
-    // Fetch final state
-    const updatedProject = await prisma.project.findUnique({
-      where: { id },
+          }
+        } : undefined
+      },
       include: {
-        polygons: {
+        polygon: {
           include: {
             popupDetails: true,
             style: true
@@ -178,6 +142,32 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+}
+
+async function handleGetOne(req: NextApiRequest, res: NextApiResponse) {
+  const { id } = req.query;
+  
+  if (!id || typeof id !== 'string') {
+    return res.status(400).json({ error: 'Invalid project ID' });
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id },
+    include: {
+      polygon: {
+        include: {
+          style: true,
+          popupDetails: true
+        }
+      }
+    }
+  });
+
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+
+  return res.status(200).json(project);
 }
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse) {

@@ -1,4 +1,5 @@
  import { GeoJsonGeometry } from "@/utils/coordinates";
+import { ProjectDetails } from "@prisma/client";
 
 export interface Coordinate {
     lat: number;
@@ -107,5 +108,5 @@ export interface Coordinate {
     createdAt: Date;
     updatedAt: Date;
     details?: ProjectDetails | null;
-    polygons: TransformedPolygon[];
+    polygon: TransformedPolygon;
   }
