@@ -1,11 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+//components/DrawMap/MeteorBackground.tsx
+import React, {  useCallback, useEffect, useRef } from 'react';
 
 const MeteorBackground = () => {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const createMeteor = () => {
+  const createMeteor = useCallback(() => {
     if (!wrapperRef.current) return;
-    
+
     const meteor = document.createElement('div');
     
     // Randomize meteor characteristics
@@ -64,16 +65,17 @@ const MeteorBackground = () => {
         wrapperRef.current.removeChild(meteor);
         document.head.removeChild(before);
       }
-    }, duration);
-  };
+    }, duration)
 
-  const createMeteorShower = () => {
-    // Create a burst of meteors
-    const meteorCount = Math.floor(Math.random() * 10) + 5; // 5-15 meteors
+  }, []);
+
+  const createMeteorShower = useCallback(() => {
+    const meteorCount = Math.floor(Math.random() * 10) + 5;
+    
     for (let i = 0; i < meteorCount; i++) {
-      setTimeout(createMeteor, Math.random() * 500); // Stagger meteor creation
+      setTimeout(createMeteor, i * 500);
     }
-  };
+  }, [createMeteor]);
 
   useEffect(() => {
     // Regular single meteors
@@ -86,7 +88,7 @@ const MeteorBackground = () => {
       clearInterval(meteorInterval);
       clearInterval(showerInterval);
     };
-  }, []);
+  }, [createMeteor, createMeteorShower]);
 
   return (
     <div 

@@ -48,6 +48,7 @@ export const POLYGON_STYLES = {
   default: {
     opacity: 0.3,
     color: '#3288bd',
+    width: 2
   },
   hover: {
     opacity: 0.6,

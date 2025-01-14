@@ -9,7 +9,7 @@ export interface Marker {
   export interface Feature {
     id: string;
     geometry: {
-      type: string;
+      type: 'Polygon' | 'LineString' | string,
       coordinates: number[][] | number[][][];
     };
   }

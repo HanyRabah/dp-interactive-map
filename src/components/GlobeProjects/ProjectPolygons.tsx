@@ -1,62 +1,14 @@
+// components/GlobeProjects/ProjectPolygons.tsx
 import { Layer, MapMouseEvent, Source, useMap } from "react-map-gl";
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ANIMATION_CONFIG, POLYGON_STYLES } from "@/styles/mapStyles";
 import ProjectDetailsModal from "./ProjectDetailsModal";
+import { coordinateUtils } from "@/utils/coordinates";
+import { HoveredFeature, Project, Projects } from "@/types/project";
 
-// Types
-interface Project {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  description?: string;
-  polygons: Array<{
-    id: string;
-    name: string;
-    type: string;
-    minZoom?: number;
-    maxZoom?: number;
-    coordinates: string;
-    style?: {
-      fillColor?: string;
-      hoverFillColor?: string;
-      fillOpacity?: number;
-      hoverFillOpacity?: number;
-      lineColor?: string;
-      lineWidth?: number;
-      lineOpacity?: number;
-      lineDashArray?: string;
-    };
-  }>;
-  style?: {
-    fillColor?: string;
-    hoverFillColor?: string;
-    fillOpacity?: number;
-    hoverFillOpacity?: number;
-    lineColor?: string;
-    lineWidth?: number;
-    lineOpacity?: number;
-    lineDashArray?: string;
-  };
-}
-interface ProjectPolygonsProps {
-  projects: Project[];
-}
-interface HoveredFeature {
-  name: string;
-  x: number;
-  y: number;
-  properties: {
-    name: string;
-    description?: string;
-    [key: string]: any;
-  };
-}
-
-const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
+const ProjectPolygons = ({ projects }: Projects) => {
   const { current: mapInstance } = useMap();
-  const [hoveredFeatureId, setHoveredFeatureId] = useState<string | null>(null);
   const [hoveredTooltip, setHoveredTooltip] = useState<HoveredFeature | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const sourcesRef = useRef<Set<string>>(new Set());
@@ -68,10 +20,9 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
     const map = mapInstance.getMap();
     
     const features = map.queryRenderedFeatures(e.point);
-    const polygonFeature = features.find(f => f.source && f.layer.id?.endsWith('-layer'));
+    const polygonFeature = features.find(f => f.source && f.layer?.id?.endsWith('-layer'));
     
     if (polygonFeature) {
-      setHoveredFeatureId(polygonFeature.properties?.id || null);
       if (polygonFeature.properties) {
         const project = projects.find(p => p.id === polygonFeature.properties?.projectId);
         if (project) {
@@ -80,14 +31,14 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
             x: e.point.x,
             y: e.point.y,
             properties: {
-              name: project.polygons.find(p => p.id === polygonFeature.properties?.id)?.name || '',
-              description: project.polygons.find(p => p.id === polygonFeature.properties?.id)?.description || ''
+              name: project.name || '',
+              description: project.description || '',
+              style: project.style
             }
           });
         }
       }
     } else {
-      setHoveredFeatureId(null);
       setHoveredTooltip(null);
     }
   }, [mapInstance, projects]);
@@ -97,7 +48,7 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
     const map = mapInstance.getMap();
     
     const features = map.queryRenderedFeatures(e.point);
-    const polygonFeature = features.find(f => f.source && f.layer.id?.endsWith('-layer'));
+    const polygonFeature = features.find(f => f.source && f.layer?.id?.endsWith('-layer'));
     
     if (polygonFeature) {
       const project = projects.find(p => p.id === polygonFeature.properties?.projectId);
@@ -107,6 +58,7 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
     }
   }
   , [mapInstance, projects]);
+  // Add hover and click event listeners to polygons
   useEffect(() => {
     if (!mapInstance) return;
     const map = mapInstance.getMap();
@@ -118,7 +70,7 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
       map.off('mousemove', handleHover);
       map.off('click', handleClick);
     };
-  }, [mapInstance, handleHover]);
+  }, [mapInstance, handleHover, handleClick]);
 
   // Cleanup line layer helper
   const cleanupLine = useCallback((map: mapboxgl.Map, id: string) => {
@@ -212,7 +164,7 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
               },
               geometry: {
                 type: "LineString",
-                coordinates: polygon.coordinates
+                coordinates: coordinateUtils.parse(polygon.coordinates)
               }
             }
           });
@@ -225,28 +177,28 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
             type: "line",
             source: polygon.id,
             paint: {
-              'line-color': polygon.style?.lineColor || project.style?.lineColor || POLYGON_STYLES.line.color,
-              'line-width': polygon.style?.lineWidth || project.style?.lineWidth || POLYGON_STYLES.line.width,
+              'line-color': polygon.style?.lineColor || POLYGON_STYLES.default.color,
+              'line-width': polygon.style?.lineWidth || POLYGON_STYLES.default.width,
               'line-opacity': [
                 'case',
                 ['boolean', ['feature-state', 'hover'], false],
                 0.8,
-                polygon.style?.lineOpacity || project.style?.lineOpacity || POLYGON_STYLES.line.opacity
+                polygon.style?.lineOpacity || POLYGON_STYLES.hover.opacity
               ]
             }
           });
 
           // Animated dashed line if lineDashArray is specified
-          const lineDashArray = polygon.style?.lineDashArray || project.style?.lineDashArray;
+          const lineDashArray = polygon.style?.lineDashArray ? [JSON.parse(polygon.style.lineDashArray as string)] : [2, 2];
           if (lineDashArray) {
             map.addLayer({
               id: `${polygon.id}-line-dashed`,
               type: "line",
               source: polygon.id,
               paint: {
-                'line-color': polygon.style?.lineColor || project.style?.lineColor || POLYGON_STYLES.line.color,
-                'line-width': polygon.style?.lineWidth || project.style?.lineWidth || POLYGON_STYLES.line.width,
-                'line-dasharray': lineDashArray || [2, 2]
+                'line-color': polygon.style?.lineColor || POLYGON_STYLES.default.color,
+                'line-width': polygon.style?.lineWidth || POLYGON_STYLES.default.width,
+                'line-dasharray': lineDashArray
               }
             });
 
@@ -304,7 +256,6 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
           
           return (
             <Source 
-             
               key={polygon.id}
               id={polygon.id}
               type="geojson" 
@@ -312,13 +263,13 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
                 type: "Feature",
                 properties: {
                   id: polygon.id,
-                  projectId: project.id,
-                  name: polygon.name
+                  name: polygon.name,
+                  style: polygon.style,
+                  projectId: project.id
                 },
                 geometry: {
                   type: polygon.type,
-                  coordinates: [coordinates
-                  ]
+                  coordinates: [JSON.parse(coordinates)] 
                 }
               }}
             >
@@ -326,9 +277,19 @@ const ProjectPolygons = ({ projects }: ProjectPolygonsProps) => {
                 id={`${polygon.id}-layer`}
                 type="fill"
                 paint={{
-                  'fill-color': polygon.style?.fillColor || '#ff0000',
-                  'fill-opacity': 0.5,
-                  'fill-outline-color': '#000000'
+                  'fill-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    polygon.style?.hoverFillColor || '#ff0000', // Hover color
+                    polygon.style?.fillColor || '#00ff00' // Default color
+                  ],
+                  'fill-opacity': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    polygon.style?.hoverFillOpacity || 0.8, // Hover opacity
+                    polygon.style?.fillOpacity || 0.5 // Default opacity
+                  ],
+                  'fill-outline-color': polygon.style?.fillColor || '#00ff00',
                 }}
               />
             </Source>

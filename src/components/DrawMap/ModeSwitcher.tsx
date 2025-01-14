@@ -1,4 +1,4 @@
-// components/ModeSwitcher.tsx
+// components/DrawMap/ModeSwitcher.tsx
 import React from 'react';
 import { Mode, MODES } from '@/types/drawMap';
 

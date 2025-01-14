@@ -1,3 +1,4 @@
+// api/projects/[id].ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 
@@ -7,13 +8,10 @@ export default async function handler(
 ) {
   try {
     switch (req.method) {
-      case 'POST':
-        return await handleCreate(req, res);
       case 'GET':
         if (req.query.id) {
           return await handleGetOne(req, res);
         }
-        return await handleGetAll(req, res);
       case 'PUT':
         return await handleUpdate(req, res);
       case 'DELETE':
@@ -64,7 +62,7 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Invalid project ID' });
   }
 
-  const { name, lat, lng, zoomLevel, hideMarker, description, polygons } = req.body;
+  const { name, lat, lng, zoom, hideMarker, description, polygons } = req.body;
 
   try {
     // First update the project
@@ -75,7 +73,7 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
         description,
         lat,
         lng,
-        zoom: zoomLevel,
+        zoom: zoom,
         hideMarker
       }
     });
@@ -83,7 +81,8 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
     // Handle polygon updates if provided
     if (polygons && Array.isArray(polygons)) {
       for (const polygon of polygons) {
-        await prisma.projectPolygon.upsert({
+        // First upsert the polygon
+        const updatedPolygon = await prisma.projectPolygon.upsert({
           where: { id: polygon.id },
           create: {
             id: polygon.id,
@@ -92,39 +91,75 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
             coordinates: polygon.coordinates,
             description: polygon.description,
             projectId: project.id,
-            style: {
+            style: polygon.style ? {
               create: {
                 fillColor: polygon.style.fillColor,
                 hoverFillColor: polygon.style.hoverFillColor,
                 fillOpacity: polygon.style.fillOpacity,
                 hoverFillOpacity: polygon.style.hoverFillOpacity,
               }
-            }
+            } : undefined
           },
           update: {
             name: polygon.name,
             type: polygon.type,
             coordinates: polygon.coordinates,
             description: polygon.description,
-            style: {
-              update: {
-                fillColor: polygon.style.fillColor,
-                hoverFillColor: polygon.style.hoverFillColor,
-                fillOpacity: polygon.style.fillOpacity,
-                hoverFillOpacity: polygon.style.hoverFillOpacity,
+            style: polygon.style ? {
+              upsert: {
+                create: {
+                  fillColor: polygon.style.fillColor,
+                  hoverFillColor: polygon.style.hoverFillColor,
+                  fillOpacity: polygon.style.fillOpacity,
+                  hoverFillOpacity: polygon.style.hoverFillOpacity,
+                },
+                update: {
+                  fillColor: polygon.style.fillColor,
+                  hoverFillColor: polygon.style.hoverFillColor,
+                  fillOpacity: polygon.style.fillOpacity,
+                  hoverFillOpacity: polygon.style.hoverFillOpacity,
+                }
               }
-            }
+            } : undefined
           }
         });
+    
+        // Then handle popup details if it exists
+        if (polygon.popupDetails) {
+          await prisma.popupDetails.upsert({
+            where: { 
+              id: polygon.popupDetailsId || `new-${polygon.id}`  // Make unique fallback ID
+            },
+            create: {
+              title: polygon.popupDetails.title || '',
+              image: polygon.popupDetails.image || '',
+              description: polygon.popupDetails.description || '',
+              link: polygon.popupDetails.link || '',
+              type: polygon.popupDetails.type || 'details',
+              ProjectPolygon: {
+                connect: { id: updatedPolygon.id }
+              }
+            },
+            update: {
+              title: polygon.popupDetails.title || '',
+              image: polygon.popupDetails.image || '',
+              description: polygon.popupDetails.description || '',
+              link: polygon.popupDetails.link || '',
+              type: polygon.popupDetails.type || 'details'
+            }
+          });
+        }
       }
     }
 
+    
     // Fetch final state
     const updatedProject = await prisma.project.findUnique({
       where: { id },
       include: {
         polygons: {
           include: {
+            popupDetails: true,
             style: true
           }
         }

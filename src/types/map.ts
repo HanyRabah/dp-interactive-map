@@ -1,4 +1,5 @@
 import { MAP_CONFIG } from "@/app/constants/mapConstants";
+import { GeoJsonGeometry } from "@/utils/coordinates";
 import { MapRef } from "react-map-gl";
 
 // Map Config
@@ -149,7 +150,7 @@ export interface Feature {
     details?: ProjectDetails;
   };
   geometry: {
-    type: "Point" | "Polygon" | "LineString";
-    coordinates: number[] | number[][] | number[][][];
+    type: GeoJsonGeometry;
+    coordinates: number[][];
   };
 }

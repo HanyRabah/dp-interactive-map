@@ -1,4 +1,4 @@
-// components/MarkerList.tsx
+// components/DrawMap/MarkerList.tsx
 import React from 'react';
 import { Marker } from '@/types/drawMap';
 import DeleteButton from './DeleteButton';

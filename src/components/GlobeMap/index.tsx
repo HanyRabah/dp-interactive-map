@@ -1,3 +1,4 @@
+// components/GlobeMap/index.tsx
 "use client";
 import React, { useRef, useCallback, useReducer, useState, useEffect } from "react";
 import dynamic from 'next/dynamic';
@@ -6,51 +7,6 @@ import MapControls from "./MapControls";
 import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
 import { ANIMATION_CONFIG } from "@/styles/mapStyles";
 import { useMapData } from "@/hooks/useMapData";
-
-// Types
-interface Project {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  description?: string;
-  hideMarker: boolean;
-  zoom: number;
-  details?: {
-    location?: string;
-    image?: string;
-    url?: string;
-    description?: string;
-  };
-  polygons: Array<{
-    id: string;
-    name: string;
-    type: string;
-    coordinates: string;
-    minZoom?: number;
-    maxZoom?: number;
-    style?: {
-      fillColor?: string;
-      hoverFillColor?: string;
-      fillOpacity?: number;
-      hoverFillOpacity?: number;
-      lineColor?: string;
-      lineWidth?: number;
-      lineOpacity?: number;
-      lineDashArray?: string;
-    };
-  }>;
-  style?: {
-    fillColor?: string;
-    hoverFillColor?: string;
-    fillOpacity?: number;
-    hoverFillOpacity?: number;
-    lineColor?: string;
-    lineWidth?: number;
-    lineOpacity?: number;
-    lineDashArray?: string;
-  };
-}
 
 interface MapState {
   showText: boolean;

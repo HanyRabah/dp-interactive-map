@@ -1,4 +1,4 @@
-// components/DetailsPanel.tsx
+// components/DrawMap/DetailsPanel.tsx
 import React from 'react';
 import { Mode, MODES, Feature, Marker } from '@/types/drawMap';
 import DeleteButton from './DeleteButton';

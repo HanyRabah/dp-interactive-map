@@ -13,250 +13,209 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
+import Grid from '@mui/material/Grid2';
+
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import Slider from '@mui/material/Slider';
-import { Alert, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import { PolygonStyle } from '@prisma/client';
+import {  CircularProgress } from '@mui/material';
 import PolygonForm from '../PolygonForm';
+import { ProjectFormData } from '..';
+import { Polygon } from '@/types/projects';
 
 
+ 
 interface ProjectFormProps {
-  formData: FormData;
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  formData: ProjectFormData;
+  updateForm: React.Dispatch<React.SetStateAction<ProjectFormData>>;
   isEditMode: boolean;
-  setAddNewProject: React.Dispatch<React.SetStateAction<boolean>>;
-  handleSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  onSubmit: (e: React.FormEvent) => void;
   isSubmitting: boolean;
-  submitError: string | null;
-  setSubmitError: React.Dispatch<React.SetStateAction<string | null>>;
   setMode: React.Dispatch<React.SetStateAction<Mode>>;
-  handlePolygonRename: (polygonId: string, newName: string) => void;
-  handleStyleUpdate: (polygonId: string, styleUpdates: Partial<PolygonStyle>) => void;
-  deleteDialogOpen: boolean;
-  setDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  handleDeleteProject: () => void;
+   handleStartEditing: (polygonId: string) => void;
 }
 
 const ProjectForm: React.FC<ProjectFormProps> = ({
   formData,
-  setFormData,
+  updateForm,
   isEditMode,
-  setAddNewProject,
-  handleSubmit,
+  onCancel,
+  onSubmit,
   isSubmitting,
-  submitError,
-  setSubmitError,
-  setMode, 
-  handleStyleUpdate,
-  deleteDialogOpen,
-  setDeleteDialogOpen,
-  handleDeleteProject,
+  setMode,  
+  handleStartEditing
 }) => { 
+ 
+  const updateFormData = (key: string, value: any) => {
+    updateForm(prev => ({ ...prev, [key]: value }));
+  }
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Name"
-            value={formData.name }
-            onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            required
-          />
-        </Grid>
-        
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Description"
-            value={formData.description}
-            onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          />
-        </Grid>
+    <Box component="form" onSubmit={onSubmit} sx={{ width: '100%' }}>
+      <Grid container spacing={2}> 
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={formData.name || ''}
+              onChange={e => updateFormData('name', e.target.value)}
+              required
+            />
+          </Grid>
+          
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Description"
+              value={formData.description}
+              onChange={e => updateFormData('description', e.target.value)}
+            />
+          </Grid>
 
-        <Grid item xs={4}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Latitude"
-            value={formData.lat}
-            onChange={e => setFormData(prev => ({ ...prev, lat: parseFloat(e.target.value) }))}
-            required
-          />
-        </Grid>
-        
-        <Grid item xs={4}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Longitude"
-            value={formData.lng}
-            onChange={e => setFormData(prev => ({ ...prev, lng: parseFloat(e.target.value) }))}
-            required
-          />
-        </Grid>
-        <Grid item xs={4}>
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={() => {
-            setMode(MODES.MARKER);
-            }}
-          >
-            Set On Map
-          </Button>
-        </Grid>
-
-
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Zoom Level"
-            value={formData.zoomLevel}
-            onChange={e => setFormData(prev => ({ ...prev, zoomLevel: parseInt(e.target.value) }))}
-            required
-          />
-        </Grid>
-
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.hideMarker}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  hideMarker: e.target.checked 
-                }))}
-              />
-            }
-            label="Hide Marker"
-          />
-        </Grid>
-
-        <Grid item xs={12}>
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Polygons</Typography>
+          <Grid size={{ xs: 4 }}>
+            <TextField
+              fullWidth
+              type="number"
+              label="Latitude"
+              value={formData.lat}
+              onChange={e => updateFormData('lat', parseFloat(e.target.value))}
+              required
+            />
+          </Grid>
+          
+          <Grid size={{ xs: 4 }}>
+            <TextField
+              fullWidth
+              type="number"
+              label="Longitude"
+              value={formData.lng}
+              onChange={e => updateFormData('lng', parseFloat(e.target.value))}
+              required
+            />
+          </Grid>
+          <Grid size={{ xs: 4 }}>
             <Button
               variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => setMode(MODES.DRAW)}
+              color="primary"
+              onClick={() => {
+              setMode(MODES.MARKER);
+              }}
             >
-              Draw Polygon
+              Set On Map
             </Button>
           </Grid>
-          {formData.polygons.map((polygon) => (
-            <Accordion key={polygon.id}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  width: '100%', 
-                  pr: 2,
-                  alignItems: 'center'
-                }}>
-                  <Box>
-                    <Typography color="text.secondary" variant="body2">
-                      {polygon.name}
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      {polygon.type}
-                    </Typography>
+
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              type="number"
+              label="Zoom Level"
+              value={formData.zoom}
+              onChange={e => updateFormData('zoom', parseInt(e.target.value))}
+              required
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.hideMarker}
+                  onChange={(e) => updateFormData('hideMarker', e.target.checked)}
+                />
+              }
+              label="Hide Marker"
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Polygons</Typography>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => setMode(MODES.DRAW)}
+              >
+                Draw Polygon
+              </Button>
+            </Grid>
+            {formData.polygons.map((polygon) => (
+              <Accordion key={polygon.id}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    width: '100%', 
+                    pr: 2,
+                    alignItems: 'center'
+                  }}>
+                    <Box>
+                      <Typography color="text.secondary" variant="body2">
+                        {polygon.name}
+                      </Typography>
+                      <Typography color="text.secondary" variant="body2">
+                        {polygon.type as unknown as string} 
+                      </Typography>
+                    </Box>
+                   
                   </Box>
-                  <Button
-                    color="error"
-                    size="small"
-                    title='Delete Polygon'
-                    startIcon={<DeleteIcon />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFormData(prev => ({
-                        ...prev,
-                        polygons: prev.polygons.filter(p => p.id !== polygon.id)
-                      }));
+                </AccordionSummary>
+                <AccordionDetails>
+                <Button
+                      color="error"
+                      size="small"
+                      title='Delete Polygon'
+                      startIcon={<DeleteIcon />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateFormData('polygons', formData.polygons.filter(p => p.id !== polygon.id));
+                      }}
+                    > 
+                    Delete Polygon 
+                    </Button>
+
+                  <PolygonForm
+                    polygon={polygon}
+                    onStartEditing={handleStartEditing}
+                    handlePolygonUpdate={(polygonId, updates) => {
+                      updateFormData('polygons', formData.polygons.map(p => p.id === polygonId ? { ...p, ...updates } : p));
                     }}
                   />
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                <PolygonForm
-                  polygon={polygon}
-                  handleStyleUpdate={handleStyleUpdate}
-                  handlePolygonUpdate={(polygonId, updates) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      polygons: prev.polygons.map(p => 
-                        p.id === polygonId 
-                          ? { ...p, ...updates }
-                          : p
-                      )
-                    }));
-                  }}
-                />
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </Grid>
-        
-        {submitError && (
-          <Grid item xs={12}>
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {submitError}
-            </Alert>
+                </AccordionDetails>
+              </Accordion>
+            ))}
           </Grid>
-        )}
+          
+          
 
-      <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
-          <Button 
-            variant="outlined" 
-            onClick={() => {
-              setAddNewProject(false);
-              setSubmitError(null);
-            }}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            variant="contained"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-                Saving...
-              </>
-            ) : (
-              isEditMode ? 'Save Changes' : 'Create Project'
-            )}
-          </Button>
-        </Grid>
-      </Grid>
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Delete Project?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this project? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteProject} color="error" autoFocus>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                  Saving...
+                </>
+              ) : (
+                isEditMode ? 'Save Changes' : 'Create Project'
+              )}
+            </Button>
+          </Grid>
+        </Grid> 
     </Box>
   )
 }

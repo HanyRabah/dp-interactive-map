@@ -5,7 +5,8 @@ import Map, { Marker } from "react-map-gl";
 import DrawControl from "./DrawControl";
 import ModeSwitcher from "./ModeSwitcher";
 import DeleteButton from "./DeleteButton";
-import { Mode, MODES, Feature, Marker as MarkerType } from "@/types/drawMap";
+import { Mode, MODES, Marker as MarkerType } from "@/types/drawMap";
+import { Feature as MapFeature } from "@/types/map";
 import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
 
 // MUI Imports
@@ -13,51 +14,28 @@ import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { CircularProgress, IconButton, List, Snackbar } from "@mui/material";
+import { CircularProgress, List, Snackbar } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
-import { EditIcon } from "lucide-react";
 import ProjectForm from "./ProjectForm";
-import { coordinateUtils } from "@/utils/coordinates";
+import { coordinateUtils, GeoJsonPolygon } from "@/utils/coordinates";
+import { Polygon } from "@/types/projects";
+import { Project } from "@/types/project";
+import ProjectCard from "./ProjectForm/ProjectCard";
+import useProjects from "@/hooks/useProjects";
+import { parse } from "path";
+ 
 
-interface PolygonStyle {
-  fillColor?: string;
-  hoverFillColor?: string;
-  fillOpacity?: number;
-  hoverFillOpacity?: number;
-  lineColor?: string;
-  lineWidth?: number;
-  lineOpacity?: number;
-  lineDashArray?: string | number[];
-  noHover?: boolean;
-}
-
-interface Polygon {
+interface Feature extends MapFeature {
   id: string;
-  name: string;
-  type: "Polygon" | "LineString";
-  coordinates: number[][];
-  style?: PolygonStyle;
 }
 
-interface Project {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  zoom: number;
-  hideMarker: boolean;
-  description?: string;
-  polygons: Polygon[];
-}
-
-interface FormData {
+export interface ProjectFormData {
   id: string;
   name: string;
   description?: string;
   lat: number | string;
   lng: number | string;
-  zoomLevel: number;
+  zoom: number;
   hideMarker: boolean;
   polygons: Polygon[];
 }
@@ -93,7 +71,7 @@ export default function DrawMap() {
   const [loading, setLoading] = useState(false);
   const [editingPolygonId, setEditingPolygonId] = useState<string | null>(null);
   const [drawControlKey, setDrawControlKey] = useState(0);
-
+  console.log(featureNames)
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
@@ -104,16 +82,19 @@ export default function DrawMap() {
     severity: "success",
   });
 
-  const [formData, setFormData] = useState<FormData>({
+  const initialFormData: ProjectFormData = {
     id: Date.now().toString(),
     name: "",
     description: "",
     lat: "",
     lng: "",
-    zoomLevel: 8,
+    zoom: 8,
     hideMarker: false,
     polygons: [],
-  });
+  };
+
+  const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
+   const { fetchProjects, deleteProject, createProject, updateProject } = useProjects();
 
   const [viewport, setViewport] = useState({
     longitude: MAP_CONFIG.initialViewState.longitude,
@@ -124,36 +105,36 @@ export default function DrawMap() {
   const handleDrawCreate = useCallback(
     ({ features }: { features: Feature[] }) => {
       const feature = features[0];
-      const newPolygon: Polygon = {
+      const newPolygon: Partial<Polygon> = {
         id: `polygon-${Date.now()}`,
         name: `New ${feature.geometry.type}`,
-        type: feature.geometry.type as "Polygon" | "LineString",
-        coordinates: coordinateUtils.fromGeoJson(feature.geometry),
-        style:
-          feature.geometry.type === "Polygon"
-            ? {
-                fillColor: "#000000",
-                hoverFillColor: "#333333",
-                fillOpacity: 0.5,
-                hoverFillOpacity: 0.7,
-                noHover: false,
-              }
-            : {
-                lineColor: "#3B82F6",
-                lineWidth: 2,
-                lineDashArray: "2,2",
-                noHover: false,
-              },
+        type: feature.geometry.type,
+        coordinates: JSON.stringify(feature.geometry.coordinates[0]),
+        projectId: formData.id,
+        style: feature.geometry.type === "Polygon" as unknown as GeoJsonPolygon
+          ? {
+              fillColor: "#000000",
+              hoverFillColor: "#333333",
+              fillOpacity: 0.5,
+              hoverFillOpacity: 0.7,
+              noHover: false,
+            }
+          : {
+              lineColor: "#3B82F6",
+              lineWidth: 2,
+              lineDashArray: "2,2",
+              noHover: false,
+            },
       };
 
-      setFormData((prev) => ({
-        ...prev,
-        polygons: [...prev.polygons, newPolygon],
+      setFormData((prev) => ({ 
+        ...prev, 
+        polygons: [...prev.polygons, newPolygon as Polygon] 
       }));
-
       setMode(MODES.VIEW);
+
     },
-    [setMode]
+    [setFormData]
   );
 
   const handleFinishEditing = useCallback(() => {
@@ -168,7 +149,7 @@ export default function DrawMap() {
         polygon.id === editingPolygonId
           ? {
               ...polygon,
-              coordinates: coordinateUtils.fromGeoJson(editedFeature.geometry),
+              coordinates: JSON.parse(JSON.stringify(editedFeature.geometry.coordinates)),
             }
           : polygon
       ),
@@ -178,39 +159,7 @@ export default function DrawMap() {
     setMode(MODES.VIEW);
   }, [editingPolygonId, features]);
 
-  const handlePolygonRename = (polygonId: string, newName: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      polygons: prev.polygons.map((polygon) =>
-        polygon.id === polygonId ? { ...polygon, name: newName } : polygon
-      ),
-    }));
-  };
-
-  const handleStyleUpdate = (
-    polygonId: string,
-    styleUpdates: Partial<PolygonStyle>
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      polygons: prev.polygons.map((polygon) =>
-        polygon.id === polygonId
-          ? {
-              ...polygon,
-              style: {
-                ...polygon.style,
-                ...styleUpdates,
-                lineDashArray: Array.isArray(styleUpdates.lineDashArray)
-                  ? JSON.stringify(styleUpdates.lineDashArray)
-                  : styleUpdates.lineDashArray,
-              },
-            }
-          : polygon
-      ),
-    }));
-  };
-
-  const onUpdate = useCallback(
+  const handleUpdateDrawing = useCallback(
     (e: { features: Feature[] }) => {
       setFeatures((currFeatures) => {
         const newFeatures = { ...currFeatures };
@@ -223,7 +172,7 @@ export default function DrawMap() {
     []
   );
 
-  const onDelete = useCallback((e: { features: Feature[] }) => {
+  const handleDeleteDrawing = useCallback((e: { features: Feature[] }) => {
     setFeatures((currFeatures) => {
       const newFeatures = { ...currFeatures };
       for (const f of e.features) {
@@ -283,54 +232,26 @@ export default function DrawMap() {
     setIsSubmitting(true);
     setSubmitError(null);
 
+
     try {
       if (!formData.name || !formData.lat || !formData.lng) {
         throw new Error("Please fill in all required fields");
       }
-
-      const projectData = {
-        ...formData,
-        polygons: formData.polygons.map((polygon) => ({
-          ...polygon,
-          coordinates: coordinateUtils.toDb(polygon.coordinates),
-        })),
-      };
-
-      const url = isEditMode
-        ? `/api/projects/${formData.id}`
-        : "/api/projects";
-      const method = isEditMode ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(projectData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save project");
+      let response = null;
+      if(!isEditMode) {
+        response = await createProject(formData);
+      } else {
+        response = await updateProject(formData.id, formData)
       }
 
-      const result = await response.json();
-      console.log(`Project ${isEditMode ? "updated" : "created"}:`, result);
+      if(response.error) {
+        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} project (${response.status})`);
+       }
 
-      setFormData({
-        id: Date.now().toString(),
-        name: "",
-        description: "",
-        lat: "",
-        lng: "",
-        zoomLevel: 8,
-        hideMarker: false,
-        polygons: [],
-      });
-
+      setFormData(initialFormData);
       setShowProjectForm(false);
-      setIsEditMode(false);
-      await fetchProjects();
+      isEditMode && setIsEditMode(false);
+      await fetchProjectsData();
 
       setNotification({
         open: true,
@@ -355,39 +276,6 @@ export default function DrawMap() {
     }
   };
 
-  const fetchProjects = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/projects", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const projects = await response.json();
-      if (!Array.isArray(projects)) {
-        throw new Error("Invalid response format");
-      }
-
-      setProjects(projects);
-    } catch (error) {
-      console.error("Error fetching projects:", error);
-      setNotification({
-        open: true,
-        message:
-          error instanceof Error ? error.message : "Failed to load projects",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEditProject = (project: Project) => {
     setFormData({
       id: project.id,
@@ -395,9 +283,9 @@ export default function DrawMap() {
       description: project.description || "",
       lat: project.lat,
       lng: project.lng,
-      zoomLevel: project.zoom,
+      zoom: project.zoom,
       hideMarker: project.hideMarker,
-      polygons: project.polygons
+      polygons: JSON.parse(JSON.stringify(project.polygons)),
     });
 
     setViewport({
@@ -410,68 +298,78 @@ export default function DrawMap() {
     setShowProjectForm(true);
   };
 
-  const deleteProject = async (projectId: string) => {
-    try {
-      if (!projectId) {
-        throw new Error("No project ID provided");
-      }
+  const handleDeleteProject = async (projectId: string) => {
+    setDeleteDialogOpen(true);
 
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete project");
-      }
-
-      await fetchProjects();
-      setNotification({
-        open: true,
-        message: "Project deleted successfully",
-        severity: "success",
-      });
-
-      setDeleteDialogOpen(false);
-    } catch (error) {
-      console.error("Delete error:", error);
-      setNotification({
-        open: true,
-        message:
-          error instanceof Error ? error.message : "Failed to delete project",
-        severity: "error",
-      });
+    const response = await deleteProject(projectId);
+    if(response.error) {
+      throw new Error(`Failed to delete project`);
     }
-  };
+    setNotification({
+      open: true,
+      message: "Project Deleted successfully",
+      severity: "success",
+    });
+    await fetchProjectsData();
+  }
 
   const handleStartEditing = (polygonId: string) => {
     const polygonToEdit = formData.polygons.find((p) => p.id === polygonId);
+    console.log("Polygon to edit:", polygonToEdit);
     if (!polygonToEdit) return;
 
     setEditingPolygonId(polygonId);
-    setMode(MODES.DRAW);
+    setMode(MODES.VIEW);
 
     try {
-      const coordinates = coordinateUtils.parse(polygonToEdit.coordinates);
-      if (!coordinateUtils.validate(coordinates)) {
-        throw new Error("Invalid coordinates format");
+      const coordinates = JSON.parse(polygonToEdit.coordinates);
+      const feature: MapFeature = {
+        type: "Feature",
+        geometry: {
+          type: polygonToEdit.type,
+          coordinates: JSON.stringify(polygonToEdit.type) === "Polygon" ? [coordinates] : coordinates
+        },
+        properties: {
+          id: polygonId,
+          lat: formData.lat as number,
+          lng: formData.lng as number,
+          name: polygonToEdit.name,
+          description: polygonToEdit.description,
+          style: polygonToEdit.style,
+        }
+      };
+      console.log("Generated feature:", feature);
+
+      setFeatures({[polygonId]: feature as Feature });
+      setDrawControlKey((prev) => prev + 1);
+
+      const getCenter = (coordinates: Feature['geometry']['coordinates']) => {
+        const bounds = coordinates.reduce(
+          (acc, coord) => {
+            acc[0] = Math.min(acc[0], coord[0]);
+            acc[1] = Math.min(acc[1], coord[1]);
+            acc[2] = Math.max(acc[2], coord[0]);
+            acc[3] = Math.max(acc[3], coord[1]);
+            return acc;
+          },
+          [Infinity, Infinity, -Infinity, -Infinity]
+        );
+        return [
+          (bounds[0] + bounds[2]) / 2,
+          (bounds[1] + bounds[3]) / 2,
+        ];
       }
 
-      const feature = {
-        id: polygonId,
-        type: "Feature",
-        properties: {},
-        geometry: coordinateUtils.toGeoJson(
-          coordinates,
-          polygonToEdit.type as "Polygon" | "LineString"
-        ),
-      };
-
-      setDrawControlKey((prev) => prev + 1);
-      setFeatures({ [polygonId]: feature });
+      const center = getCenter(coordinates);
+      if (center) {
+        setViewport((prev) => ({
+          ...prev,
+          longitude: center[0],
+          latitude: center[1],
+          zoom: 12, // Adjust the zoom level as needed
+        }));
+      }
+      
     } catch (error) {
       console.error("Error parsing coordinates:", error);
       setNotification({
@@ -482,8 +380,26 @@ export default function DrawMap() {
     }
   };
 
-  useEffect(() => {
-    fetchProjects();
+  const fetchProjectsData = async () => {
+    try {
+      setLoading(true);
+      const projects = await fetchProjects();
+      setProjects(projects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setNotification({
+        open: true,
+        message:
+          error instanceof Error ? error.message : "Failed to load projects",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+ useEffect(() => {
+    fetchProjectsData();
   }, []);
 
   return (
@@ -549,7 +465,7 @@ export default function DrawMap() {
         >
           {(mode === MODES.DRAW || editingPolygonId) && (
             <DrawControl
-              key={drawControlKey}
+              key={drawControlKey} // Ensure this key changes when editing starts
               position="top-left"
               displayControlsDefault={false}
               controls={{
@@ -559,12 +475,11 @@ export default function DrawMap() {
                 combine_features: false,
                 uncombine_features: false,
               }}
-              defaultMode="simple_select"
+              defaultMode={mode === MODES.DRAW ? "draw_polygon" : "simple_select"}
               onCreate={handleDrawCreate}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-              initialFeatures={Object.values(features)}
-            />
+              onUpdate={handleUpdateDrawing}
+              onDelete={handleDeleteDrawing}
+          />
           )}
 
           {mode === MODES.MARKER && marker && (
@@ -647,9 +562,12 @@ export default function DrawMap() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setShowProjectForm(true)}
+            onClick={() => {
+              setFormData(initialFormData);
+              setShowProjectForm(true);
+            }}
           >
-            Add New Project
+            Add Project
           </Button>
         </Box>
 
@@ -662,50 +580,11 @@ export default function DrawMap() {
             ) : (
               <List>
                 {projects.map((project) => (
-                  <Box
+                  <ProjectCard 
                     key={project.id}
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      pr: 2,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Box>
-                      <Typography color="text.secondary" variant="body2">
-                        {project.name}
-                      </Typography>
-                      <Typography color="text.secondary" variant="body2">
-                        {project.description}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <IconButton
-                        edge="end"
-                        aria-label="edit"
-                        onClick={() => handleEditProject(project)}
-                        sx={{ mr: 1 }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Are you sure you want to delete this project?"
-                            )
-                          ) {
-                            deleteProject(project.id);
-                          }
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </Box>
+                    project={project} 
+                    onEdit={() => handleEditProject(project)} 
+                    onDelete={() => handleDeleteProject(project.id)}/>
                 ))}
               </List>
             )}
@@ -715,23 +594,20 @@ export default function DrawMap() {
         {showNewProjectForm && (
           <ProjectForm
             formData={formData}
-            setFormData={setFormData}
+            updateForm={setFormData as unknown as React.Dispatch<React.SetStateAction<ProjectFormData>>}
             isEditMode={isEditMode}
-            setAddNewProject={setShowProjectForm}
-            handleSubmit={handleSubmit}
+            onCancel={() => {
+              setShowProjectForm(false); 
+              setMode(MODES.VIEW);
+            }}
+            onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
-            submitError={submitError}
-            setSubmitError={setSubmitError}
             setMode={setMode}
-            handlePolygonRename={handlePolygonRename}
-            handleStyleUpdate={handleStyleUpdate}
-            deleteDialogOpen={deleteDialogOpen}
-            setDeleteDialogOpen={setDeleteDialogOpen}
-            onStartEditing={handleStartEditing}
-            editingPolygonId={editingPolygonId}
+             handleStartEditing={handleStartEditing}
           />
         )}
+       
       </Box>
     </Box>
   );
-}
+} 

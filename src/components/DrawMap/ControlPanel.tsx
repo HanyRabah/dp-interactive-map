@@ -1,3 +1,4 @@
+// components/DrawMap/ControlPanel.tsx
 import * as React from 'react';
 
 function ControlPanel(props: any) {

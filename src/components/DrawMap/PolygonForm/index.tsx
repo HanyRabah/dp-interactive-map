@@ -4,12 +4,14 @@ import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
+import Grid from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import { Slider, RadioGroup, Radio, FormControl, FormLabel, Button } from '@mui/material';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import { Edit as EditIcon } from 'lucide-react';
+import { Polygon } from '@/types/projects';
+import { GeoJsonPolygon } from '@/utils/coordinates';
 
 interface PolygonStyle {
   fillColor?: string;
@@ -22,30 +24,12 @@ interface PolygonStyle {
   noHover?: boolean;
 }
 
-interface PopupDetails {
-  link?: string;
-  image?: string;
-  title?: string;
-  description?: string;
-}
-
-interface Polygon {
-  id: string;
-  name: string;
-  description?: string;
-  type: 'Polygon' | 'LineString';
-  coordinates: string;
-  style?: PolygonStyle;
-  popupType?: 'link' | 'details';
-  popupDetails?: PopupDetails;
-}
 
 interface PolygonFormProps {
   polygon: Polygon;
-  handleStyleUpdate: (polygonId: string, styleUpdates: Partial<PolygonStyle>) => void;
   handlePolygonUpdate: (polygonId: string, updates: Partial<Polygon>) => void;
   onStartEditing: (polygonId: string) => void;
-  isEditing: boolean;
+  isEditing?: boolean;
 }
 
 interface TabPanelProps {
@@ -73,17 +57,20 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 
 const PolygonForm: React.FC<PolygonFormProps> = ({
   polygon,
-  handleStyleUpdate,
   handlePolygonUpdate,
   onStartEditing,
   isEditing,
 }) => {
-
   const [activeTab, setActiveTab] = React.useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
+
+
+  const updatePolygonStyles = (styleUpdates: Partial<PolygonStyle>) => {
+    handlePolygonUpdate(polygon.id, { style: { ...polygon.style, ...styleUpdates } });
+  }
 
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
@@ -99,7 +86,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
       {/* Basic Info Tab */}
       <TabPanel value={activeTab} index={0}>
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <TextField
               fullWidth
               label="Name"
@@ -108,7 +95,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
               required
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <TextField
               fullWidth
               multiline
@@ -124,48 +111,44 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
       {/* Style Tab */}
       <TabPanel value={activeTab} index={1}>
         <Grid container spacing={2}>
-          {polygon.type === 'Polygon' && (
+          {polygon.type === "Polygon" as unknown as GeoJsonPolygon && (
             <>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <TextField
                   fullWidth
                   label="Fill Color"
                   type="color"
                   value={polygon.style?.fillColor || '#000000'}
-                  onChange={(e) => handleStyleUpdate(polygon.id, { fillColor: e.target.value })}
-                  InputProps={{
-                    sx: { height: '40px' }
-                  }}
+                  onChange={(e) => updatePolygonStyles({ fillColor: e.target.value }) }
+                  slotProps={{input: { sx: { height: '40px' }} }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <TextField
                   fullWidth
                   label="Hover Fill Color"
                   type="color"
                   value={polygon.style?.hoverFillColor || '#333333'}
-                  onChange={(e) => handleStyleUpdate(polygon.id, { hoverFillColor: e.target.value })}
-                  InputProps={{
-                    sx: { height: '40px' }
-                  }}
+                  onChange={(e) => updatePolygonStyles({ hoverFillColor: e.target.value })}
+                  slotProps={{input: { sx: { height: '40px' }} }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <Typography gutterBottom>Fill Opacity</Typography>
                 <Slider
                   value={polygon.style?.fillOpacity || 0.5}
-                  onChange={(_, value) => handleStyleUpdate(polygon.id, { fillOpacity: value as number })}
+                  onChange={(_, value) => updatePolygonStyles({ fillOpacity: value as number })}
                   step={0.1}
                   marks
                   min={0}
                   max={1}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <Typography gutterBottom>Hover Fill Opacity</Typography>
                 <Slider
                   value={polygon.style?.hoverFillOpacity || 0.7}
-                  onChange={(_, value) => handleStyleUpdate(polygon.id, { hoverFillOpacity: value as number })}
+                  onChange={(_, value) => updatePolygonStyles({ hoverFillOpacity: value as number })}
                   step={0.1}
                   marks
                   min={0}
@@ -174,33 +157,31 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
               </Grid>
             </>
           )}
-          <Grid item xs={12} sm={6}>
+          <Grid size={{xs: 12, sm: 6}} >
             <TextField
               fullWidth
               label="Line Color"
               type="color"
               value={polygon.style?.lineColor || '#000000'}
-              onChange={(e) => handleStyleUpdate(polygon.id, { lineColor: e.target.value })}
-              InputProps={{
-                sx: { height: '40px' }
-              }}
+              onChange={(e) => updatePolygonStyles( { lineColor: e.target.value })}
+              slotProps={{input: { sx: { height: '40px' }} }}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid size={{xs: 12, sm: 6}}>
             <TextField
               fullWidth
               type="number"
               label="Line Width"
               value={polygon.style?.lineWidth || 1}
-              onChange={(e) => handleStyleUpdate(polygon.id, { lineWidth: parseInt(e.target.value) })}
+              onChange={(e) => updatePolygonStyles( { lineWidth: parseInt(e.target.value) })}
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <FormControlLabel
               control={
                 <Checkbox
                   checked={polygon.style?.noHover || false}
-                  onChange={(e) => handleStyleUpdate(polygon.id, { noHover: e.target.checked })}
+                  onChange={(e) => updatePolygonStyles({ noHover: e.target.checked })}
                 />
               }
               label="Disable Hover Effects"
@@ -212,13 +193,13 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
       {/* Popup Tab */}
       <TabPanel value={activeTab} index={2}>
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <FormControl component="fieldset">
               <FormLabel component="legend">Popup Type</FormLabel>
               <RadioGroup
                 row
-                value={polygon.popupType || 'details'}
-                onChange={(e) => handlePolygonUpdate(polygon.id, { popupType: e.target.value as 'link' | 'details' })}
+                value={polygon.popupDetails?.type || 'details'}
+                onChange={(e) => handlePolygonUpdate(polygon.id, { popupDetails: { type: e.target.value as "link" | "details" } })}
               >
                 <FormControlLabel value="link" control={<Radio />} label="Simple Link" />
                 <FormControlLabel value="details" control={<Radio />} label="Detailed Info" />
@@ -226,8 +207,8 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
             </FormControl>
           </Grid>
 
-          {polygon.popupType === 'link' ? (
-            <Grid item xs={12}>
+          {polygon.popupDetails?.type === 'link' ? (
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 label="Link URL"
@@ -239,7 +220,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
             </Grid>
           ) : (
             <>
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   fullWidth
                   label="Popup Title"
@@ -249,7 +230,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
                   })}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   fullWidth
                   label="Image URL"
@@ -259,7 +240,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
                   })}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   fullWidth
                   multiline
@@ -278,7 +259,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
 
       <TabPanel value={activeTab} index={3}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Grid size={{xs: 12}} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle1">Edit Coordinates</Typography>
             <Button
               variant="outlined"
@@ -290,7 +271,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
               {isEditing ? "Currently Editing" : "Edit on Map"}
             </Button>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               {isEditing 
                 ? "Click and drag points on the map to edit the polygon shape. Click 'Finish Editing' when done."

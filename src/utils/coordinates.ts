@@ -17,6 +17,7 @@ export interface GeoJsonLineString {
   coordinates: number[][];
 }
 
+
 export type GeoJsonGeometry = GeoJsonPolygon | GeoJsonLineString;
 
 export const coordinateUtils = {
@@ -40,13 +41,32 @@ export const coordinateUtils = {
     }
   },
 
+
   // Convert from GeoJSON format to our internal format
+  // fromGeoJson(geometry: GeoJsonGeometry): Coordinates {
+  //   if (geometry.type === 'Polygon') {
+  //     return geometry.coordinates[0]; // Take the outer ring only
+  //   }
+  //   return geometry.coordinates;
+  // },
+
+
   fromGeoJson(geometry: GeoJsonGeometry): Coordinates {
+
     if (geometry.type === 'Polygon') {
+
       return geometry.coordinates[0]; // Take the outer ring only
+
+    } else if (geometry.type === 'LineString') {
+
+      return geometry.coordinates;
+
     }
-    return geometry.coordinates;
+
+    throw new Error(`Unsupported geometry type: ${geometry.type}`);
+
   },
+
 
   // Convert to GeoJSON format
   toGeoJson(coords: Coordinates, type: 'Polygon' | 'LineString'): GeoJsonGeometry {
@@ -79,10 +99,8 @@ export const coordinateUtils = {
   // Validate coordinates format
   validate(coords: any[]): boolean {
     if (!Array.isArray(coords)) return false;
-    console.log("🚀 ~ file: coordinateUtils.ts ~ line 82")
     // For polygons, expecting array of arrays of coordinates
     if (!coords.every(coord => Array.isArray(coord))) return false;
-    console.log("🚀 ~ file: coordinateUtils.ts ~ line 85")
     // Each coordinate should be [number, number]
 
     return coords.every(coordArray => 

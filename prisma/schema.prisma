@@ -35,19 +35,32 @@ model ProjectDetails {
 }
 
 model ProjectPolygon {
-  id          String        @id @default(uuid())
-  name        String
-  type        String
-  coordinates String
-  minZoom     Int?
-  maxZoom     Int?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  projectId   String
-  style       PolygonStyle?
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String        @id @default(uuid())
+  name           String
+  description    String?
+  type           String
+  coordinates    String
+  popupDetails   PopupDetails? @relation(fields: [popupDetailsId], references: [id], onDelete: Cascade)
+  popupDetailsId String? // This should be optional if PopupDetails is optional
+  minZoom        Int?
+  maxZoom        Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  projectId      String
+  style          PolygonStyle?
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+model PopupDetails {
+  id             String           @id @default(uuid())
+  title          String?         
+  image          String?         
+  description    String?         
+  link           String?         
+  type           String
+  ProjectPolygon ProjectPolygon[]
 }
 
 model PolygonStyle {
@@ -65,4 +78,3 @@ model PolygonStyle {
   polygonId        String         @unique
   polygon          ProjectPolygon @relation(fields: [polygonId], references: [id], onDelete: Cascade)
 }
-

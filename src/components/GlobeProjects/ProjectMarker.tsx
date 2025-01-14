@@ -1,36 +1,9 @@
+// components/GlobeProjects/ProjectMarker.tsx
 import { Marker } from "react-map-gl";
 import { useState } from "react";
+import MarkerIcon from "../Layout/Icons/Marker";
+import { Project } from "@/types/project";
 
-const DefaultIcon = () => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="currentColor"
-    className="w-4 h-4"
-  >
-    <path 
-      fillRule="evenodd" 
-      d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" 
-      clipRule="evenodd" 
-    />
-  </svg>
-);
-
-interface MarkerStyle {
-  iconColor?: string;
-  backgroundColor?: string;
-  pulseColor?: string;
-  icon?: React.ReactNode;
-}
-
-interface Project {
-  id: string;
-  lat: number;
-  lng: number;
-  name: string;
-  hideMarker: boolean;
-  markerStyle?: MarkerStyle;
-}
 
 interface ProjectMarkerProps {
   handleClick: (id: string) => void;
@@ -50,8 +23,8 @@ const ProjectsMarker = ({ handleClick, projects }: ProjectMarkerProps) => {
           iconColor = 'white',
           backgroundColor = 'rgb(59 130 246)',
           pulseColor = 'rgba(59, 130, 246, 0.2)',
-          icon = <DefaultIcon />
-        } = project.markerStyle || {};
+          icon = <MarkerIcon />,
+        } = project.style || {};
 
         return (
           <Marker

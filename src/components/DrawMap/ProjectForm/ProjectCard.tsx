@@ -1,7 +1,9 @@
 // components/ProjectCard.tsx
 import React from 'react';
-import { Edit2, Trash2 } from 'lucide-react';
-import { Project } from '@/types/projects';
+import { DeleteIcon, Edit2, EditIcon, Trash2 } from 'lucide-react';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Project } from '@/types/project';
+import { Typography, IconButton } from '@mui/material';
 
 interface ProjectCardProps {
   project: Project;
@@ -9,13 +11,46 @@ interface ProjectCardProps {
   onDelete: () => void;
 }
 
+const DeletePopup = ({ 
+  deleteDialogOpen, 
+  setDeleteDialogOpen, 
+  deleteProject }: {
+  deleteDialogOpen: boolean;
+  setDeleteDialogOpen: (open: boolean) => void;
+  deleteProject: () => void;
+}) => {
+  return  <Dialog
+  open={deleteDialogOpen}
+  onClose={() => setDeleteDialogOpen(false)}
+>
+  <DialogTitle>Delete Project?</DialogTitle>
+  <DialogContent>
+    <DialogContentText>
+      Are you sure you want to delete this project? This action cannot be undone.
+    </DialogContentText>
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+    <Button onClick={deleteProject} color="error" autoFocus>
+      Delete
+    </Button>
+  </DialogActions>
+</Dialog>
+}
 export default function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+
+  const handleDeleteProject = () => {
+    setDeleteDialogOpen(false);
+    onDelete();
+  }
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h2 className="text-xl font-semibold">{project.name}</h2>
-          <p className="text-gray-600 mt-1">{project.description}</p>
+          <Typography variant="h6">{project.name}</Typography>
+          <Typography variant="subtitle1">{project.description}</Typography>
         </div>
         <div className="flex gap-2">
           <button
@@ -25,7 +60,7 @@ export default function ProjectCard({ project, onEdit, onDelete }: ProjectCardPr
             <Edit2 className="w-4 h-4" />
           </button>
           <button
-            onClick={onDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className="p-2 text-red-500 hover:bg-red-50 rounded"
           >
             <Trash2 className="w-4 h-4" />
@@ -42,6 +77,11 @@ export default function ProjectCard({ project, onEdit, onDelete }: ProjectCardPr
           <span>{project.lng}</span>
         </div>
       </div>
+      <DeletePopup 
+        deleteDialogOpen={deleteDialogOpen}
+        setDeleteDialogOpen={setDeleteDialogOpen}
+        deleteProject={handleDeleteProject}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// components/DeleteButton.tsx
+// components/DrawMap/DeleteButton.tsx
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 

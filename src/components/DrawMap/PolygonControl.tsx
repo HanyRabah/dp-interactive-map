@@ -1,4 +1,4 @@
-// components/FeatureList.tsx
+// components/DrawMap/FeatureList.tsx
 import React from 'react';
 import DeleteButton from './DeleteButton';
 import { Feature, FeatureNames } from '@/types/drawMap';
