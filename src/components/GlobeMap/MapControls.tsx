@@ -1,8 +1,8 @@
 // components/GlobeMap/MapControls.tsx
 import { MapControlsProps, MapControlsStyleOption } from '@/types/map';
 import React, { useEffect, useRef, useState } from 'react';
-import { SatelliteIcon, Waypoints, Settings, GlobeIcon, Globe2Icon } from 'lucide-react'; 
-import  { NavigationControl, FullscreenControl,  GeolocateControl } from "react-map-gl";
+import { SatelliteIcon, Waypoints, GlobeIcon, Globe2Icon } from 'lucide-react'; 
+import  { NavigationControl, FullscreenControl } from "react-map-gl";
 import { Box } from '@mui/material';
 
 
@@ -10,13 +10,16 @@ const ControlButton: React.FC<{ onClick: () => void; title: string; icon: React.
   <Box
     title={title}
     onClick={onClick}
+    sx={{ width: 41, height: 41 }}
     className={`
-      w-10 h-10 
       flex items-center justify-center
       rounded-lg bg-white shadow-md
       hover:bg-gray-50 
       transition-all duration-200
-      border border-gray-200
+      box-shadow-lg
+      border border-gray-500
+      border-opacity-20
+      border-outside
       ${disabled ? 'text-blue-500' : 'text-gray-500'}
       ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
       ${disabled ? 'opacity-50' : 'opacity-100'}
@@ -46,9 +49,9 @@ const ControlSubMenu: React.FC<{ onClick: ()=> void, selected: boolean, children
   </Box>
 );
 
-const MapControls: React.FC<MapControlsProps> = ({  toggleGoogleLayer, handleZoomOut, isZoomedOut, showMarkers, showPolygons, setShowMarkers, setShowPolygons }) => {
+const MapControls: React.FC<MapControlsProps> = ({  toggleGoogleLayer, handleZoomOut, isZoomedOut}) => {
   const [showStyleMenu, setShowStyleMenu] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  //const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [selectedMapStyle, setSelectedMapStyle] = useState<string>('satellite');
   const menuRef = useRef<HTMLDivElement>(null);
   const mapStyles: MapControlsStyleOption[] = [
@@ -89,7 +92,7 @@ const MapControls: React.FC<MapControlsProps> = ({  toggleGoogleLayer, handleZoo
 
   
   return (
-    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+    <div className="absolute right-2.5 bottom-40  flex flex-col gap-2 z-10">
          {/* Globe View Button */}
       <ControlButton onClick={handleZoomOut} disabled={isZoomedOut} icon={<GlobeIcon width={18}/>} title="Globe View" />
       {/* Map Style Button */}
@@ -107,7 +110,7 @@ const MapControls: React.FC<MapControlsProps> = ({  toggleGoogleLayer, handleZoo
           ))}
         </div>
       )}
-       <ControlButton onClick={() => setShowSettingsMenu(!showSettingsMenu)} icon={<Settings width={18}/>} title="Settings" />
+       {/* <ControlButton onClick={() => setShowSettingsMenu(!showSettingsMenu)} icon={<Settings width={18}/>} title="Settings" />
 
         {showSettingsMenu && (
         <div className="absolute right-12 top-24 bg-white rounded-lg shadow-lg py-2 min-w-[130px] shadow-lg">
@@ -135,11 +138,11 @@ const MapControls: React.FC<MapControlsProps> = ({  toggleGoogleLayer, handleZoo
               </div>
             </>
         </div>
-      )}
+      )} */}
 
       <NavigationControl position="bottom-right" showCompass={false} style={{ padding: 6 }}/>
       <FullscreenControl position="bottom-right" style={{ padding: 6 }}/>
-      <GeolocateControl position="bottom-right" style={{ padding: 6 }}/>
+      {/* <GeolocateControl position="bottom-right" style={{ padding: 6 }}/> */}
       </div>
     );
   };

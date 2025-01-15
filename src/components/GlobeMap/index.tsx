@@ -2,11 +2,12 @@
 "use client";
 import React, { useRef, useCallback, useReducer, useState, useEffect } from "react";
 import dynamic from 'next/dynamic';
-import Map, { MapRef } from "react-map-gl";
+import Map, {  MapRef } from "react-map-gl";
 import MapControls from "./MapControls";
 import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
 import { ANIMATION_CONFIG } from "@/styles/mapStyles";
-import { useMapData } from "@/hooks/useMapData";
+import { Project } from "@/types/project";
+import { LocationBreadcrumb } from "./LocationBreadcrumb";
 
 interface MapState {
   showText: boolean;
@@ -28,7 +29,6 @@ type MapAction =
 // Dynamic imports
 const ProjectPolygons = dynamic(() => import('@/components/GlobeProjects/ProjectPolygons'), { ssr: false });
 const ProjectsMarker = dynamic(() => import('@/components/GlobeProjects/ProjectMarker'), { ssr: false });
-const ProjectList = dynamic(() => import('@/components/GlobeProjects/ProjectList'), { ssr: false });
 const MeteorBackground = dynamic(() => import('./MeteorBackground'), { ssr: false });
 
 // Reducer
@@ -47,19 +47,28 @@ function mapReducer(state: MapState, action: MapAction): MapState {
   }
 }
 
-const InteractiveMap: React.FC = () => {
-  const { mapData, loading, error } = useMapData();
-  const mapRef = useRef<MapRef>(null);
+
+type GlobeMapProps = {
+  projects: Project[];
+  selectedProject: Project | null;
+  setSelectedProject: (project: Project | null) => void; 
+};
+
+const GlobeMap = ({projects, selectedProject, setSelectedProject}: GlobeMapProps) => {
+   const mapRef = useRef<MapRef>(null);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showPolygons, setShowPolygons] = useState(false);
   const [showMeteor, setShowMeteor] = useState(true);
+  const [selectedPOI, setSelectedPOI] = useState<any>(null);
+  const [routeInfo, setRouteInfo] = useState<any>(null);
+
   const [state, dispatch] = useReducer(mapReducer, {
     showText: true,
     mapLoaded: false,
     showGoogleLayer: true,
     viewState: MAP_CONFIG.initialViewState
   });
-  const [isProjectListOpen, setIsProjectListOpen] = useState(false);
+  // const [isProjectListOpen, setIsProjectListOpen] = useState(false);
 
   // Handle zoom changes
   const handleZoomChange = useCallback(() => {
@@ -72,10 +81,12 @@ const InteractiveMap: React.FC = () => {
       setShowMarkers(false);
       setShowPolygons(true);
       setShowMeteor(false);
+      
     } else {
       setShowMarkers(true);
       setShowPolygons(false);
       setShowMeteor(true);
+
     }
   }, []);
 
@@ -89,9 +100,9 @@ const InteractiveMap: React.FC = () => {
       duration: 3000,
     });
     
-    dispatch({ type: 'TOGGLE_TEXT', payload: true });
     handleZoomChange();
-  }, [handleZoomChange]);
+    setSelectedProject(null);
+  }, [handleZoomChange, setSelectedProject]);
 
   // Layer Management Functions
   const addGoogleMapLayer = useCallback(() => {
@@ -166,20 +177,29 @@ const InteractiveMap: React.FC = () => {
     addGoogleMapLayer();
   }, [addGoogleMapLayer]);
 
-  const handleChangeLocation = useCallback((id: string) => {
-    const project = mapData.find((p) => p.id === id);
+  
+  const handleSelectProject = useCallback((id: string) => {
+    const project = projects.find((p) => p.id === id);
+    
     const map = mapRef?.current;
+    // const mapboxMap = mapRef?.current?.getMap();
+    // const coordinates = JSON.parse(project.polygon?.coordinates || '[]');
+    // const bounds = mapboxMap?.getBounds();
+    // coordinates.forEach((coord: LngLatLike) => {
+    //   bounds?.extend(coord);
+    // });
     
     if (!project || !map) return;
     
     map.flyTo({
+      padding: 50,
       center: [project.lng, project.lat],
       zoom: project.zoom,
       duration: 3000,
     });
-    
-    dispatch({ type: 'TOGGLE_TEXT', payload: project.zoom === 1 });
-  }, [mapData]);
+
+    setSelectedProject(project as Project)
+   }, [projects, setSelectedProject]);
 
   const spinGlobe = useCallback(() => {
     const mapboxMap = mapRef?.current?.getMap();
@@ -204,6 +224,16 @@ const InteractiveMap: React.FC = () => {
       });
     }
   }, []);
+  
+
+  const handleMapClick = useCallback((e: mapboxgl.MapLayerMouseEvent) => {
+    // Only clear selection if clicking outside polygons
+    if (!e.features?.length) {
+      //setSelectedProject(null);
+    }
+  }, []);
+
+
 
   useEffect(() => {
     const mapboxMap = mapRef?.current?.getMap();
@@ -217,16 +247,18 @@ const InteractiveMap: React.FC = () => {
     };
   }, [handleZoomChange]);
 
-  if (error) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Map Data</h2>
-          <p className="text-gray-600">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (selectedProject) {
+      const map = mapRef?.current;
+      if (!map) return;
+
+      map.flyTo({
+        center: [selectedProject.lng, selectedProject.lat],
+        zoom: selectedProject.zoom,
+        duration: 3000,
+      });
+    }
+  }, [selectedProject]);
 
   return (
     <div className="m-0" id="map-page">
@@ -241,32 +273,40 @@ const InteractiveMap: React.FC = () => {
           onIdle={spinGlobe}
           projection={{ name: 'globe' }}
           onZoom={handleZoomChange}
+          onClick={handleMapClick}
         >
-          {showPolygons && <ProjectPolygons projects={mapData} />}
-          {showMarkers && <ProjectsMarker handleClick={handleChangeLocation} projects={mapData} />}
-          
+          {selectedProject && <ProjectPolygons 
+            project={selectedProject}
+            sendSelectedPOI={setSelectedPOI}
+            sendRouteInfo={setRouteInfo}
+            />
+          }
+
+          {showMarkers && <ProjectsMarker handleClick={handleSelectProject} projects={projects} />}
           <MapControls 
             showGoogleLayer={state.showGoogleLayer}
             toggleGoogleLayer={toggleGoogleLayer}
             handleZoomOut={handleZoomOut}
-            isZoomedOut={state.showText}
+            isZoomedOut={!selectedProject}
             mapBox={mapRef}
             showMarkers={showMarkers}
             showPolygons={showPolygons}
             setShowMarkers={setShowMarkers}
             setShowPolygons={setShowPolygons}
           />
-          <ProjectList
-            projects={mapData}
-            onSelect={handleChangeLocation}
-            isOpen={isProjectListOpen}
-            setIsOpen={setIsProjectListOpen}
-            loading={loading}
-          />
+
+        {selectedProject && 
+          <LocationBreadcrumb
+            selectedProject={selectedProject}
+            selectedPOI={selectedPOI}
+            routeInfo={routeInfo}
+            center={selectedProject ? [selectedProject.lng, selectedProject.lat] : [0, 0]}
+          /> 
+        }
         </Map>
       </div>
     </div>
   );
 };
 
-export default InteractiveMap;
+export default GlobeMap;

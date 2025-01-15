@@ -6,6 +6,7 @@ export type Project = Prisma.ProjectGetPayload<{
     polygon: {
       include: {
         style: true
+        popupDetails: true
       }
     }
     style: true

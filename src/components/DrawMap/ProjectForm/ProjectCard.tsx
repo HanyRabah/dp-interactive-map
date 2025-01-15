@@ -1,9 +1,9 @@
 // components/ProjectCard.tsx
 import React from 'react';
-import { DeleteIcon, Edit2, EditIcon, Trash2 } from 'lucide-react';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Edit2,  Trash2 } from 'lucide-react';
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import { Project } from '@/types/project';
-import { Typography, IconButton } from '@mui/material';
+import { Typography } from '@mui/material';
 
 interface ProjectCardProps {
   project: Project;

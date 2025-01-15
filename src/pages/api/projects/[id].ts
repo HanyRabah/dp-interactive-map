@@ -73,6 +73,9 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
                   image: polygon.popupDetails.image || '',
                   description: polygon.popupDetails.description || '',
                   link: polygon.popupDetails.link || '',
+                  ariealLink: polygon.popupDetails.ariealLink || '',
+                  videoLink: polygon.popupDetails.videoLink || '',
+                  imagesLink: polygon.popupDetails.imagesLink || '',
                   type: polygon.popupDetails.type || 'details',
                 }
               } : undefined
@@ -104,6 +107,9 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
                     title: polygon.popupDetails.title || '',
                     image: polygon.popupDetails.image || '',
                     description: polygon.popupDetails.description || '',
+                    ariealLink: polygon.popupDetails.ariealLink || '',
+                    videoLink: polygon.popupDetails.videoLink || '',
+                    imagesLink: polygon.popupDetails.imagesLink || '',
                     link: polygon.popupDetails.link || '',
                     type: polygon.popupDetails.type || 'details',
                   },
@@ -111,6 +117,9 @@ async function handleUpdate(req: NextApiRequest, res: NextApiResponse) {
                     title: polygon.popupDetails.title || '',
                     image: polygon.popupDetails.image || '',
                     description: polygon.popupDetails.description || '',
+                    ariealLink: polygon.popupDetails.ariealLink || '',
+                    videoLink: polygon.popupDetails.videoLink || '',
+                    imagesLink: polygon.popupDetails.imagesLink || '',
                     link: polygon.popupDetails.link || '',
                     type: polygon.popupDetails.type || 'details',
                   }

@@ -59,6 +59,9 @@ model PopupDetails {
   image          String?
   description    String?
   link           String?
+  imagesLink     String?
+  videoLink      String?
+  ariealLink     String?
   type           String
   ProjectPolygon ProjectPolygon[]
 }
@@ -77,4 +80,30 @@ model PolygonStyle {
   updatedAt        DateTime       @updatedAt
   polygonId        String         @unique
   polygon          ProjectPolygon @relation(fields: [polygonId], references: [id], onDelete: Cascade)
+}
+
+
+// Add these models to your existing schema
+model POI {
+  id          String    @id @default(uuid())
+  title       String
+  lat         Float
+  lng         Float
+  type        POIType   @relation(fields: [typeId], references: [id])
+  typeId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([lat, lng])
+  @@index([typeId])
+}
+
+model POIType {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  icon        String    // Icon identifier
+  color       String    // Marker color
+  pois        POI[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

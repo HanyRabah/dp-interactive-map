@@ -23,7 +23,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {  CircularProgress } from '@mui/material';
 import PolygonForm from '../PolygonForm';
 import { ProjectFormData } from '..';
-import { Polygon } from '@/types/projects';
 
 
  
@@ -160,7 +159,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                         {formData.polygon.name}
                       </Typography>
                       <Typography color="text.secondary" variant="body2">
-                        {formData.polygon.type} 
+                        {JSON.stringify(formData.polygon.type)} 
                       </Typography>
                     </Box>
                   </Box>

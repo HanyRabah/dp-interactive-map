@@ -1,15 +1,14 @@
 // components/DrawMap/index.tsx
 "use client";
-import React, { useState, useCallback, useEffect } from "react";
-import Map, { Marker } from "react-map-gl";
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import Map, { MapRef, Marker } from "react-map-gl";
 import DrawControl from "./DrawControl";
 import ModeSwitcher from "./ModeSwitcher";
 import DeleteButton from "./DeleteButton";
 import { Mode, MODES, Marker as MarkerType } from "@/types/drawMap";
 import { Feature as MapFeature } from "@/types/map";
 import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
-
-// MUI Imports
+import { Search, X } from 'lucide-react';
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
@@ -17,12 +16,11 @@ import AddIcon from "@mui/icons-material/Add";
 import { CircularProgress, List, Snackbar } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
 import ProjectForm from "./ProjectForm";
-import { coordinateUtils, GeoJsonPolygon } from "@/utils/coordinates";
+import { GeoJsonPolygon } from "@/utils/coordinates";
 import { Polygon } from "@/types/projects";
 import { Project } from "@/types/project";
 import ProjectCard from "./ProjectForm/ProjectCard";
 import useProjects from "@/hooks/useProjects";
-import { parse } from "path";
  
 
 interface Feature extends MapFeature {
@@ -55,6 +53,11 @@ const MapPin = () => (
   </svg>
 );
 
+interface SearchResult {
+  id: string;
+  place_name: string;
+  center: [number, number];
+}
 export default function DrawMap() {
   const [features, setFeatures] = useState<Record<string, Feature>>({});
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
@@ -65,13 +68,17 @@ export default function DrawMap() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showNewProjectForm, setShowProjectForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingPolygonId, setEditingPolygonId] = useState<string | null>(null);
   const [drawControlKey, setDrawControlKey] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const mapRef = useRef<MapRef>(null);
+
   console.log(featureNames)
+
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
@@ -101,6 +108,43 @@ export default function DrawMap() {
     latitude: MAP_CONFIG.initialViewState.latitude,
     zoom: 8,
   });
+
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}&limit=5`
+      );
+      const data = await response.json();
+      setSearchResults(data.features.map((feature: any) => ({
+        id: feature.id,
+        place_name: feature.place_name,
+        center: feature.center
+      })));
+      setIsSearching(true);
+    } catch (error) {
+      console.error('Error searching location:', error);
+    }
+  };
+
+  const handleLocationSelect = (result: SearchResult) => {
+    if (!mapRef.current) return;
+    
+    // Fly to location
+    mapRef.current.flyTo({
+      center: result.center,
+      zoom: 14,
+      duration: 2000
+    });
+
+    // Clear search
+    setSearchResults([]);
+    setSearchQuery('');
+    setIsSearching(false);
+  };
+
 
   const handleDrawCreate = useCallback(
     ({ features }: { features: Feature[] }) => {
@@ -137,7 +181,7 @@ export default function DrawMap() {
       }));
       setMode(MODES.VIEW);
     },
-    [setFormData, formData.polygon]
+    [setFormData, formData.polygon, setMode, setFeatures, setDrawControlKey]
   );
 
   const handleFinishEditing = useCallback(() => {
@@ -153,7 +197,7 @@ export default function DrawMap() {
 
     setEditingPolygonId(null);
     setMode(MODES.VIEW);
-  }, [editingPolygonId, features]);
+  }, [editingPolygonId, features, formData.polygon]);
 
   const handleUpdateDrawing = useCallback(
     (e: { features: Feature[] }) => {
@@ -226,8 +270,6 @@ export default function DrawMap() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitError(null);
-
 
     try {
       if (!formData.name || !formData.lat || !formData.lng) {
@@ -258,9 +300,6 @@ export default function DrawMap() {
       });
     } catch (error) {
       console.error("Submit error:", error);
-      setSubmitError(
-        error instanceof Error ? error.message : "An unexpected error occurred"
-      );
       setNotification({
         open: true,
         message:
@@ -295,7 +334,6 @@ export default function DrawMap() {
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    setDeleteDialogOpen(true);
 
     const response = await deleteProject(projectId);
     if(response.error) {
@@ -311,7 +349,6 @@ export default function DrawMap() {
 
   const handleStartEditing = () => {
     const polygonToEdit = formData.polygon
-    console.log("Polygon to edit:", polygonToEdit);
     if (!polygonToEdit) return;
 
     setEditingPolygonId(polygonToEdit.id);
@@ -396,10 +433,54 @@ export default function DrawMap() {
 
  useEffect(() => {
     fetchProjectsData();
-  }, []);
+  });
 
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>
+        {/* Search Box */}
+        <div className="absolute top-4 left-4 z-10 w-[300px]">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Search location..."
+            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleSearch}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            <Search size={20} />
+          </button>
+        </div>
+
+        {/* Search Results */}
+        {isSearching && searchResults.length > 0 && (
+          <div className="mt-2 bg-white rounded-lg shadow-lg max-h-[300px] overflow-y-auto">
+            <div className="p-2 flex justify-between items-center border-b">
+              <span className="text-sm font-semibold">Search Results</span>
+              <button 
+                onClick={() => setIsSearching(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {searchResults.map((result) => (
+              <button
+                key={result.id}
+                onClick={() => handleLocationSelect(result)}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 text-sm"
+              >
+                {result.place_name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
@@ -448,6 +529,7 @@ export default function DrawMap() {
         )}
 
         <Map
+          ref={mapRef}
           initialViewState={{
             longitude: MAP_CONFIG.initialViewState.longitude,
             latitude: MAP_CONFIG.initialViewState.latitude,
@@ -456,8 +538,8 @@ export default function DrawMap() {
           mapStyle="mapbox://styles/mapbox/standard-satellite"
           mapboxAccessToken={MAPBOX_TOKEN}
           onClick={handleMapClick}
-          {...viewport}
           onMove={(evt) => setViewport(evt.viewState)}
+          {...viewport}
         >
           {(mode === MODES.DRAW || editingPolygonId) && (
             <DrawControl

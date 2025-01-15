@@ -6,6 +6,8 @@ import Script from 'next/script';
 import Header from '@/components/Layout/Header';
 import Loader from '@/components/Loader';
 import { ToastContainer } from 'react-toastify';
+import { Project } from '@/types/project';
+import { useMapData } from '@/hooks/useMapData';
 
 
 const MapComponent = dynamic(() => import('@/components/GlobeMap'), {
@@ -15,6 +17,9 @@ const MapComponent = dynamic(() => import('@/components/GlobeMap'), {
 
 export default function Home() {
   const [mapboxLoaded, setMapboxLoaded] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const { mapData: Projects, error } = useMapData();
+  
 
   useEffect(() => {
     // Add Mapbox CSS
@@ -32,6 +37,18 @@ export default function Home() {
     };
   }, []);
 
+
+    if (error) {
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Map Data</h2>
+            <p className="text-gray-600">{error}</p>
+          </div>
+        </div>
+      );
+    }
+
   return (
     <main className="w-full h-screen relative">
       <Script
@@ -40,9 +57,16 @@ export default function Home() {
         strategy="beforeInteractive"
       />
         <Loader showLoader={!mapboxLoaded} />
-        <Header />
+        <Header 
+          projects={Projects} 
+          setSelectedProject={setSelectedProject}
+          selectedProject={selectedProject}
+          />
         <ToastContainer />
-        <MapComponent />
+        <MapComponent 
+        projects={Projects} 
+        setSelectedProject={setSelectedProject} 
+        selectedProject={selectedProject} />
     </main>
   );
 }

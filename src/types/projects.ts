@@ -49,6 +49,9 @@ export interface Coordinate {
     type?: 'link' | 'details';
     description?: string;
     link?: string;
+    imagesLink?: string;
+    videoLink?: string;
+    ariealLink?: string;
   }
   
   export interface PolygonInput {

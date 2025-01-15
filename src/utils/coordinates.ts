@@ -63,7 +63,7 @@ export const coordinateUtils = {
 
     }
 
-    throw new Error(`Unsupported geometry type: ${geometry.type}`);
+    throw new Error(`Unsupported geometry type:`);
 
   },
 

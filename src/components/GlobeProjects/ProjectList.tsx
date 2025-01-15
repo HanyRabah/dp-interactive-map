@@ -1,64 +1,54 @@
-// components/GlobeProjects/ProjectList.tsx
 "use client";
 import React from "react";
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Project } from "@prisma/client";
+import { Project } from "@/types/project";
 
 interface ProjectListProps {
-    projects: Project[];
-    onSelect: (id: string) => void;
-    isOpen: boolean;
-    setIsOpen: (open: boolean) => void;
-    loading: boolean;
-  }
+  projects: Project[];
+  onSelect: (project: Project) => void;
+  isOpen: boolean;
+}
 
-  
 const ProjectList: React.FC<ProjectListProps> = ({ 
   projects, 
   onSelect,
-  isOpen,
-  setIsOpen,
-  loading
+  isOpen
 }) => {
-  if (loading) {
-    return (
-      <div className="absolute top-4 right-4 z-10 w-[300px] bg-white/90 rounded-lg shadow-lg p-4 flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
 
   return (
-    <div className="absolute top-4 right-4 z-10 w-[300px]">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-white/90 rounded-lg shadow-lg hover:bg-white/100 transition-all"
-      >
-        <span className="text-sm font-medium">Project List</span>
-        {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-      </button>
+    <div className={`fixed top-20 right-0 h-screen w-[400px] bg-black shadow-lg transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className=" overflow-y-auto h-[calc(100%-64px)] group/item ">
+          {projects.map((project) => {
+            return <button
+            key={project.id}
+            onClick={() => {
+              onSelect(project);
+            }}
+            className="group/edit w-full text-left  shadow-md px-3 py-3 hover:bg-white transition-colors mb-4 flex items-start space-x-4"
+          >
+            {/* Placeholder for project image */}
+            <div className="w-44 h-32 bg-gray-200 rounded-md flex items-center justify-center">
+              {project?.polygon?.popupDetails?.image ? (
+                <img
+                  src={project.polygon.popupDetails.image}
+                  alt={project.name}
+                  className="w-full h-full object-cover rounded-md"
+                />
+              ) : (
+                <span className="text-xs text-gray-500">No Image</span>
+              )}
+            </div>
 
-      {isOpen && (
-        <div className="mt-2 bg-white/90 rounded-lg shadow-lg max-h-[400px] overflow-y-auto backdrop-blur-sm">
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              onClick={() => {
-                onSelect(project.id);
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 hover:bg-black/5 transition-colors border-b border-gray-100 last:border-0"
-            >
-              <h3 className="text-sm font-medium mb-1">{project.name}</h3>
+            <div className="flex-1 ">
+              <h2 className="text-lg font-medium mb-1 text-white group-hover/edit:text-black transition-colors">{project.name}</h2>
               {project.description && (
-                <p className="text-xs text-gray-600 line-clamp-2">
+                <p className="text-xs text-gray-600 line-clamp-3 text-white group-hover/edit:text-gray-600 transition-colors">
                   {project.description}
                 </p>
               )}
-            </button>
-          ))}
+            </div>
+          </button>
+          })}
         </div>
-      )}
     </div>
   );
 };

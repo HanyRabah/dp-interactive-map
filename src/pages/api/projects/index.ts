@@ -77,6 +77,9 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
                 title: polygonData.popupDetails.title || '',
                 image: polygonData.popupDetails.image || '',
                 description: polygonData.popupDetails.description || '',
+                ariealLink: polygonData.popupDetails.ariealLink || '',
+                videoLink: polygonData.popupDetails.videoLink || '',
+                imagesLink: polygonData.popupDetails.imagesLink || '',
                 link: polygonData.popupDetails.link || '',
                 type: polygonData.popupDetails.type || 'details',
               }

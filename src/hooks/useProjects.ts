@@ -47,8 +47,8 @@ const useProjects = () => {
   }
 
   const updateProject =   async (id: string, updates: ProjectFormData) => {
-      console.log("🚀 ~ updateProject ~ updates:", updates)
-      try {
+       console.log("🚀 ~ updateProject ~ updates:", updates)
+       try {
         const response = await fetch(`${url}/${id}`, {
           method: 'PUT',
           headers: {

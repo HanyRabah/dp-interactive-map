@@ -252,6 +252,37 @@ const PolygonForm: React.FC<PolygonFormProps> = ({
                   })}
                 />
               </Grid>
+              <Grid size={{xs: 12}}>
+                <TextField
+                  fullWidth
+                  label="360 View Link"
+                  value={polygon.popupDetails?.ariealLink || ''}
+                  onChange={(e) => handlePolygonUpdate(polygon.id, {
+                    popupDetails: { ...polygon.popupDetails, ariealLink: e.target.value }
+                  })}
+                />
+              </Grid>
+              <Grid size={{xs: 12}}>
+                <TextField
+                  fullWidth
+                  label="Video Link"
+                  value={polygon.popupDetails?.videoLink || ''}
+                  onChange={(e) => handlePolygonUpdate(polygon.id, {
+                    popupDetails: { ...polygon.popupDetails, videoLink: e.target.value }
+                  })}
+                />
+              </Grid>
+              <Grid size={{xs: 12}}>
+                <TextField
+                  fullWidth
+                  label="Images Link"
+                  value={polygon.popupDetails?.imagesLink || ''}
+                  onChange={(e) => handlePolygonUpdate(polygon.id, {
+                    popupDetails: { ...polygon.popupDetails, imagesLink: e.target.value }
+                  })}
+                />
+              </Grid>
+
             </>
           )}
         </Grid>
