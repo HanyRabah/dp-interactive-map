@@ -77,8 +77,6 @@ export default function DrawMap() {
   const [isSearching, setIsSearching] = useState(false);
   const mapRef = useRef<MapRef>(null);
 
-  console.log(featureNames)
-
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
@@ -433,7 +431,7 @@ export default function DrawMap() {
 
  useEffect(() => {
     fetchProjectsData();
-  });
+  },[]);
 
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>

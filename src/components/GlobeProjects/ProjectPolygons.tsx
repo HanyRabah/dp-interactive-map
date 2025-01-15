@@ -21,7 +21,6 @@ const ProjectPolygons = ({ project, sendSelectedPOI, sendRouteInfo }: {project: 
   const animationFramesRef = useRef<{ [key: string]: number }>({});
   const [nearbyPois, setNearbyPois] = useState<POIType[]>([]);
   const [selectedPOI, setSelectedPOI] = useState<POIType | null>(null);
-  console.log("🚀 ~ selectedPOI:", selectedPOI)
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [showProjectDetails, setShowProjectDetails] = useState(false);
 

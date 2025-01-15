@@ -13,8 +13,6 @@ import ProjectList from "@/components/GlobeProjects/ProjectList";
 }
 
 const Header = ({ projects, selectedProject, setSelectedProject }:HeaderProps) => {
-  console.log("🚀 ~ Header ~ selectedProject:", selectedProject)
-  
   const [isProjectListOpen, setIsProjectListOpen] = useState(false);
  
   const handleProjectSelect = (project: Project) => {
