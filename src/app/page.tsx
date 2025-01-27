@@ -13,6 +13,8 @@ const MapComponent = dynamic(() => import("@/components/GlobeMap"), {
 	ssr: false,
 });
 
+const GA_TRACKING_ID = "G-BVW1DHYJ1R";
+
 export default function Home() {
 	const [mapboxLoaded, setMapboxLoaded] = useState(false);
 	const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -51,6 +53,22 @@ export default function Home() {
 				src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"
 				onLoad={() => setMapboxLoaded(true)}
 				strategy="beforeInteractive"
+			/>
+			{/* Google Analytics */}
+			<Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`} strategy="afterInteractive" />
+			<Script
+				id="google-analytics"
+				strategy="afterInteractive"
+				dangerouslySetInnerHTML={{
+					__html: `
+					window.dataLayer = window.dataLayer || [];
+					function gtag(){dataLayer.push(arguments);}
+					gtag('js', new Date());
+					gtag('config', '${GA_TRACKING_ID}', {
+					page_path: window.location.pathname,
+					});
+				`,
+				}}
 			/>
 			<Loader showLoader={!mapboxLoaded} />
 			<Header

@@ -10,7 +10,6 @@ interface CanvasPolygonProps {
 }
 
 const CanvasPolygon = ({ coordinates, fillColor, fillOpacity, outlineColor }: CanvasPolygonProps) => {
-	console.log("🚀 ~ CanvasPolygon ~ coordinates:", coordinates);
 	const { current: map } = useMap();
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 

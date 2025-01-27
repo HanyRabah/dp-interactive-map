@@ -22,7 +22,7 @@ const Header = ({ projects, selectedProject, setSelectedProject, loading }: Head
 	};
 
 	return (
-		<div className="fixed top-0 inset-x-0 z-30 bg-black/60 backdrop-blur-sm">
+		<div className="fixed top-0 inset-x-0 z-30 bg-black/80 backdrop-blur-sm ">
 			<header className="relative h-20 px-8 mx-auto duration-200">
 				<nav className="txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
 					<div className="flex items-center h-full">
@@ -41,22 +41,30 @@ const Header = ({ projects, selectedProject, setSelectedProject, loading }: Head
 						className="p-2 rounded-full text-white hover:bg-white hover:text-black transition-colors">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							className="h-6 w-6"
+							className={`h-6 w-6 transform transition-transform duration-300 ${isProjectListOpen ? "rotate-45" : ""}`}
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+							{isProjectListOpen ? (
+								<>
+									<line x1="6" y1="12" x2="18" y2="12" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+									<line x1="12" y1="6" x2="12" y2="18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+								</>
+							) : (
+								<>
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+								</>
+							)}
 						</svg>
 					</button>
 
-					{isProjectListOpen && (
-						<ProjectList
-							projects={projects}
-							onSelect={handleProjectSelect}
-							isOpen={isProjectListOpen}
-							loading={loading}
-						/>
-					)}
+					<ProjectList
+						projects={projects}
+						onSelect={handleProjectSelect}
+						isOpen={isProjectListOpen}
+						loading={loading}
+						selected={selectedProject}
+					/>
 				</nav>
 			</header>
 		</div>
