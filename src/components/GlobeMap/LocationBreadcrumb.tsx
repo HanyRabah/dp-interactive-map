@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { ChevronRight, Clock, MapPin } from 'lucide-react';
 import { Project } from '@/types/project';
+import { ChevronRight, Clock, MapPin } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useMap } from 'react-map-gl';
 
 interface LocationInfo {
@@ -124,7 +124,7 @@ export const LocationBreadcrumb: React.FC<LocationBreadcrumbProps> = ({
   };
 
   return (
-    <div className="absolute bottom-8 left-4 z-10 bg-black/50 text-white rounded-lg px-4 py-2  z-10">
+    <div className="absolute bottom-8 left-4 bg-black/50 text-white rounded-lg px-4 py-2  z-10">
       <div className="flex items-center space-x-2 text-sm">
       {locationInfo?.country.name && (
           <>

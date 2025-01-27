@@ -1,6 +1,6 @@
-import React from 'react';
-import { Car, Footprints } from 'lucide-react';
 import { POI } from '@/types/poi';
+import { Car, Footprints } from 'lucide-react';
+import React from 'react';
 // onPOIClick: (poi: POI) => void;
 
 interface POIPanelProps {
@@ -33,7 +33,7 @@ export const POIPanel: React.FC<POIPanelProps> = ({
 
 
   return (
-    <div className="absolute right-4 top-20 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 max-w-xs">
+    <div className="absolute right-4 top-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 max-w-xs">
       {/* <h3 className="text-lg font-semibold mb-3">
         Points of Interest ({pois.length})
       </h3> */}
