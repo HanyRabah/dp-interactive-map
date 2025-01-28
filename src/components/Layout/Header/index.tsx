@@ -38,14 +38,14 @@ const Header = ({ projects, selectedProject, setSelectedProject, loading }: Head
 					</div>
 
 					<div
-						className="flex justify-around text-center p-2 rounded-full text-white hover:bg-white hover:text-black transition-colors z-20 cursor-pointer "
+						className="flex justify-around w-[100px] text-center items-center p-2 rounded-full text-white hover:bg-white hover:text-black transition-colors z-20 cursor-pointer "
 						onClick={() => setIsProjectListOpen(!isProjectListOpen)}>
 						{isProjectListOpen ? (
-							<Typography variant="body2" className="leading-[1.7] mr-2 w-[50px]">
+							<Typography variant="body2" className="leading-[1.7] ">
 								Close
 							</Typography>
 						) : (
-							<Typography variant="body2" className="leading-[1.7]  mr-2  w-[50px]">
+							<Typography variant="body2" className="leading-[1.7]">
 								Projects
 							</Typography>
 						)}
