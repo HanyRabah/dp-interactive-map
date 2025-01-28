@@ -31,13 +31,13 @@ const ProjectListSkeleton = () => (
 );
 
 const ProjectList: React.FC<ProjectListProps> = ({ projects, onSelect, isOpen, loading, selected }) => {
-	if (loading) return <ProjectListSkeleton />;
+	if (loading && isOpen) return <ProjectListSkeleton />;
 	return (
 		<div
-			className={`fixed top-20 right-0 h-screen w-[400px] bg-black/80 backdrop-blur-lg shadow-lg shadow-white/30 transition-transform duration-300  ${
+			className={`fixed top-0 right-0 h-screen w-[400px] bg-black/80 backdrop-blur-lg shadow-lg shadow-white/30 transition-transform duration-300  ${
 				isOpen ? "translate-x-0" : "translate-x-full"
 			}`}>
-			<div className=" overflow-y-auto h-[calc(100%-64px)] group/item">
+			<div className="pt-20 overflow-y-auto h-[calc(100%-64px)] group/item">
 				{projects.map(project => {
 					return (
 						<button

@@ -28,6 +28,7 @@ type MapAction =
 // Dynamic imports
 const ProjectPolygons = dynamic(() => import("@/components/GlobeProjects/ProjectPolygons"), { ssr: false });
 const ProjectsMarker = dynamic(() => import("@/components/GlobeProjects/ProjectMarker"), { ssr: false });
+const ClusteredMarkers = dynamic(() => import("@/components/GlobeProjects/ClusteredMarkers"), { ssr: false });
 const MeteorBackground = dynamic(() => import("./MeteorBackground"), {
 	ssr: false,
 });
@@ -56,12 +57,13 @@ type GlobeMapProps = {
 
 const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapProps) => {
 	const mapRef = useRef<MapRef>(null);
-	const [showMarkers, setShowMarkers] = useState(true);
+	const [showMarkers, setShowMarkers] = useState(false);
 	const [showPolygons, setShowPolygons] = useState(false);
 	const [showMeteor, setShowMeteor] = useState(true);
 	const [selectedPOI, setSelectedPOI] = useState<any>(null);
 	const [routeInfo, setRouteInfo] = useState<any>(null);
 	const prevZoomRef = useRef<number | null>(null);
+	const [zoomLevel, setZoomLevel] = useState<number>(2);
 
 	const [state, dispatch] = useReducer(mapReducer, {
 		showText: true,
@@ -77,6 +79,7 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 		if (!mapboxMap) return;
 
 		const currentZoom = mapboxMap.getZoom();
+		setZoomLevel(currentZoom);
 
 		if (prevZoomRef.current !== null) {
 			const isZoomingOut = currentZoom < prevZoomRef.current;
@@ -270,6 +273,23 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 		}
 	}, [selectedProject]);
 
+	const handleCountryClick = useCallback((center: [number, number]) => {
+		const map = mapRef?.current;
+		if (!map) return;
+
+		map.flyTo({
+			center: center,
+			zoom: 10,
+			duration: 3000,
+		});
+	}, []);
+
+	useEffect(() => {
+		if (projects.length > 0) {
+			setShowMarkers(true);
+		}
+	}, [setShowMarkers, projects]);
+
 	return (
 		<div className="m-0" id="map-page">
 			{showMeteor && <MeteorBackground />}
@@ -322,7 +342,15 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 						<ProjectPolygons project={selectedProject} sendSelectedPOI={setSelectedPOI} sendRouteInfo={setRouteInfo} />
 					)}
 
-					{showMarkers && <ProjectsMarker handleClick={handleSelectProject} projects={projects} />}
+					{/* {showMarkers && <ProjectsMarker handleClick={handleSelectProject} projects={projects} />} */}
+					{showMarkers && (
+						<ClusteredMarkers
+							projects={projects}
+							zoom={zoomLevel || 2}
+							handleClick={handleSelectProject}
+							onGroupClick={handleCountryClick}
+						/>
+					)}
 					<MapControls
 						showGoogleLayer={state.showGoogleLayer}
 						toggleGoogleLayer={toggleGoogleLayer}

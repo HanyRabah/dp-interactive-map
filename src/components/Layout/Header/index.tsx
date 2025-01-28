@@ -2,6 +2,7 @@
 
 import ProjectList from "@/components/GlobeProjects/ProjectList";
 import { Project } from "@/types/project";
+import { Typography } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -22,7 +23,7 @@ const Header = ({ projects, selectedProject, setSelectedProject, loading }: Head
 	};
 
 	return (
-		<div className="fixed top-0 inset-x-0 z-30 bg-black/80 backdrop-blur-sm ">
+		<div className="fixed top-0 inset-x-0 z-30">
 			<header className="relative h-20 px-8 mx-auto duration-200">
 				<nav className="txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
 					<div className="flex items-center h-full">
@@ -36,9 +37,18 @@ const Header = ({ projects, selectedProject, setSelectedProject, loading }: Head
 						</Link>
 					</div>
 
-					<button
-						onClick={() => setIsProjectListOpen(!isProjectListOpen)}
-						className="p-2 rounded-full text-white hover:bg-white hover:text-black transition-colors">
+					<div
+						className="flex justify-around text-center p-2 rounded-full text-white hover:bg-white hover:text-black transition-colors z-20 cursor-pointer "
+						onClick={() => setIsProjectListOpen(!isProjectListOpen)}>
+						{isProjectListOpen ? (
+							<Typography variant="body2" className="leading-[1.7] mr-2 w-[50px]">
+								Close
+							</Typography>
+						) : (
+							<Typography variant="body2" className="leading-[1.7]  mr-2  w-[50px]">
+								Projects
+							</Typography>
+						)}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							className={`h-6 w-6 transform transition-transform duration-300 ${isProjectListOpen ? "rotate-45" : ""}`}
@@ -56,7 +66,7 @@ const Header = ({ projects, selectedProject, setSelectedProject, loading }: Head
 								</>
 							)}
 						</svg>
-					</button>
+					</div>
 
 					<ProjectList
 						projects={projects}
