@@ -78,7 +78,12 @@ export default function Home() {
 				loading={loading}
 			/>
 			<ToastContainer />
-			<MapComponent projects={Projects} setSelectedProject={setSelectedProject} selectedProject={selectedProject} />
+			<MapComponent
+				projects={Projects}
+				projectsLoading={loading}
+				setSelectedProject={setSelectedProject}
+				selectedProject={selectedProject}
+			/>
 		</main>
 	);
 }

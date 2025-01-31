@@ -1,6 +1,7 @@
 // components/GlobeMap/index.tsx
 "use client";
 import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
+import Loader from "@/components/Loader";
 import { ANIMATION_CONFIG } from "@/styles/mapStyles";
 import { Project } from "@/types/project";
 import dynamic from "next/dynamic";
@@ -51,11 +52,12 @@ function mapReducer(state: MapState, action: MapAction): MapState {
 
 type GlobeMapProps = {
 	projects: Project[];
+	projectsLoading: boolean;
 	selectedProject: Project | null;
 	setSelectedProject: (project: Project | null) => void;
 };
 
-const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapProps) => {
+const GlobeMap = ({ projects, projectsLoading, selectedProject, setSelectedProject }: GlobeMapProps) => {
 	const mapRef = useRef<MapRef>(null);
 	const [showMarkers, setShowMarkers] = useState(false);
 	const [showPolygons, setShowPolygons] = useState(false);
@@ -71,7 +73,6 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 		showGoogleLayer: true,
 		viewState: MAP_CONFIG.initialViewState,
 	});
-	// const [isProjectListOpen, setIsProjectListOpen] = useState(false);
 
 	// Handle zoom changes
 	const handleZoomChange = useCallback(() => {
@@ -196,13 +197,6 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 			const project = projects.find(p => p.id === id);
 
 			const map = mapRef?.current;
-			// const mapboxMap = mapRef?.current?.getMap();
-			// const coordinates = JSON.parse(project.polygon?.coordinates || '[]');
-			// const bounds = mapboxMap?.getBounds();
-			// coordinates.forEach((coord: LngLatLike) => {
-			//   bounds?.extend(coord);
-			// });
-
 			if (!project || !map) return;
 
 			map.flyTo({
@@ -248,6 +242,17 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 		}
 	}, []);
 
+	const handleCountryClick = useCallback((center: [number, number]) => {
+		const map = mapRef?.current;
+		if (!map) return;
+
+		map.flyTo({
+			center: center,
+			zoom: 10,
+			duration: 3000,
+		});
+	}, []);
+
 	useEffect(() => {
 		const mapboxMap = mapRef?.current?.getMap();
 		if (!mapboxMap) return;
@@ -273,17 +278,6 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 		}
 	}, [selectedProject]);
 
-	const handleCountryClick = useCallback((center: [number, number]) => {
-		const map = mapRef?.current;
-		if (!map) return;
-
-		map.flyTo({
-			center: center,
-			zoom: 10,
-			duration: 3000,
-		});
-	}, []);
-
 	useEffect(() => {
 		if (projects.length > 0) {
 			setShowMarkers(true);
@@ -293,6 +287,7 @@ const GlobeMap = ({ projects, selectedProject, setSelectedProject }: GlobeMapPro
 	return (
 		<div className="m-0" id="map-page">
 			{showMeteor && <MeteorBackground />}
+			<Loader showLoader={projectsLoading} />
 			<div className="absolute top-0 h-screen w-full z-0">
 				<Map
 					ref={mapRef}
