@@ -380,7 +380,7 @@ const ProjectPolygons = ({
 				coordinates: [
 					bezierSpline(turf.lineString(coordinates), {
 						resolution: 10000,
-						sharpness: 0.85,
+						sharpness: 0.2,
 					}).geometry.coordinates,
 				],
 			},
@@ -409,7 +409,7 @@ const ProjectPolygons = ({
 					polygon.style?.hoverFillOpacity || 0.8,
 					polygon.style?.fillOpacity || 0.5,
 				],
-				"fill-antialias": true,
+				// "fill-antialias": true,
 			},
 		});
 		// Add border layer

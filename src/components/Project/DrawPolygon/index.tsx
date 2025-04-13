@@ -29,6 +29,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 	const [canSave, setCanSave] = useState(false);
 	const [isDrawReady, setIsDrawReady] = useState(false);
 	const [hasPolygon, setHasPolygon] = useState(false);
+	const [mapInitialized, setMapInitialized] = useState(false);
 	const { projectId } = useParams();
 
 	// Refs
@@ -44,7 +45,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 		}
 	}, [polygons]);
 
-	//const hasPolygon = parsedCoords?.length > 0;
+	// Check if polygon exists
 	useEffect(() => {
 		if (polygons?.coordinates) {
 			setHasPolygon(true);
@@ -110,31 +111,36 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 
-		if (!map || !map.loaded() || !styleLoaded) {
+		if (!map || !map.isStyleLoaded()) {
 			console.log("Map not ready for Google Satellite layer");
 			return;
 		}
 
+		// Check if the source already exists to prevent duplicates
 		if (map.getSource("google-satellite")) return;
 
-		map.addSource("google-satellite", {
-			type: "raster",
-			tiles: ["https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"],
-			tileSize: 256,
-		});
-
-		const style = map.getStyle();
-		const symbolLayer = style?.layers?.find(layer => layer.type === "symbol")?.id;
-
-		map.addLayer(
-			{
-				id: "google-satellite-layer",
+		try {
+			map.addSource("google-satellite", {
 				type: "raster",
-				source: "google-satellite",
-				paint: { "raster-opacity": 1 },
-			},
-			symbolLayer
-		);
+				tiles: ["https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"],
+				tileSize: 256,
+			});
+
+			const style = map.getStyle();
+			const symbolLayer = style?.layers?.find(layer => layer.type === "symbol")?.id;
+			map.addLayer(
+				{
+					id: "google-satellite-layer",
+					type: "raster",
+					source: "google-satellite",
+					paint: { "raster-opacity": 1 },
+				},
+				symbolLayer
+			);
+			console.log("Google Map Layer is added");
+		} catch (error) {
+			console.error("Error adding Google Satellite layer:", error);
+		}
 	}, []);
 
 	/**
@@ -164,7 +170,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 			setFormData(prev => ({ ...prev, polygon }));
 			setMode(MODES.VIEW);
 		},
-		[formData]
+		[formData, projectId]
 	);
 
 	/**
@@ -210,41 +216,126 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 	 */
 	const handleEditPolygon = () => {
 		const polygonToEdit = formData.polygon;
-		const draw = drawRef.current;
-		const map = mapRef.current?.getMap();
 
-		if (!polygonToEdit || !draw || !map?.hasControl(draw)) {
-			console.warn("Cannot edit: drawRef is invalid or detached");
+		// Check if draw reference is available
+		if (!drawRef.current) {
+			console.warn("Draw reference is not available, attempting to initialize it");
+			// Try to initialize the draw tool if it's not already initialized
+			initializeDrawTool();
+
+			// Set a delay before attempting to edit to give time for initialization
+			setTimeout(() => {
+				if (drawRef.current) {
+					activateEditMode(polygonToEdit);
+				} else {
+					console.error("Failed to initialize draw tool for editing");
+					alert("Unable to edit polygon. Please try closing and reopening the editor.");
+				}
+			}, 1000);
+			return;
+		}
+
+		// Draw reference exists, check if it's attached to the map
+		const map = mapRef.current?.getMap();
+		if (!map?.hasControl(drawRef.current)) {
+			console.warn("Draw control is detached, attempting to reattach");
+
+			// Try to re-add the control
+			if (map) {
+				if (drawRef.current) {
+					// Try to add the control back
+					map.addControl(drawRef.current);
+
+					// Set a delay before attempting to edit
+					setTimeout(() => {
+						//@ts-expect-error: The 'hasControl' method expects a specific type
+						if (map.hasControl(drawRef.current)) {
+							activateEditMode(polygonToEdit);
+						} else {
+							console.error("Failed to reattach draw control");
+							alert("Unable to edit polygon. Please try closing and reopening the editor.");
+						}
+					}, 500);
+				} else {
+					// If draw reference was lost somehow, re-initialize
+					initializeDrawTool();
+					setTimeout(() => activateEditMode(polygonToEdit), 1000);
+				}
+			}
+			return;
+		}
+
+		// If everything is OK, activate edit mode directly
+		activateEditMode(polygonToEdit);
+	};
+	const activateEditMode = (polygonToEdit: any) => {
+		if (!polygonToEdit || !drawRef.current || !mapRef.current) {
+			console.error("Cannot activate edit mode: missing required references");
 			return;
 		}
 
 		try {
+			const map = mapRef.current.getMap();
+
+			// Ensure the polygon feature exists in the draw instance
+			const features = drawRef.current.getAll().features;
+			const featureExists = features.some(f => f.id === polygonToEdit.id);
+
+			if (!featureExists) {
+				console.log("Polygon feature not found in draw, adding it now");
+				// Add the polygon to the draw instance if it doesn't exist
+				try {
+					const coords = JSON.parse(polygonToEdit.coordinates);
+					const feature = {
+						id: polygonToEdit.id,
+						type: "Feature",
+						geometry: { type: "Polygon", coordinates: [coords] },
+						properties: {
+							name: polygonToEdit.name,
+							style: polygonToEdit.style,
+						},
+					};
+					// @ts-expect-error: The 'add' method expects a specific type
+					drawRef.current.add(feature);
+				} catch (err) {
+					console.error("Failed to add polygon to draw instance:", err);
+					return;
+				}
+			}
+
+			// Set editor state
 			setMode(MODES.EDIT);
 			setEditingId(polygonToEdit.id);
 
-			draw.changeMode("direct_select", {
+			// Change to direct_select mode
+			drawRef.current.changeMode("direct_select", {
 				featureId: polygonToEdit.id,
 			});
 
-			const coordinates = JSON.parse(polygonToEdit.coordinates);
-			// Calculate bounds to focus on the polygon
-			const bounds = coordinates.reduce(
-				(acc: number[], coord: number[]) => [
-					Math.min(acc[0], coord[0]),
-					Math.min(acc[1], coord[1]),
-					Math.max(acc[2], coord[0]),
-					Math.max(acc[3], coord[1]),
-				],
-				[Infinity, Infinity, -Infinity, -Infinity]
-			);
+			// Zoom to polygon
+			try {
+				const coordinates = JSON.parse(polygonToEdit.coordinates);
+				// Calculate bounds to focus on the polygon
+				const bounds = coordinates.reduce(
+					(acc: number[], coord: number[]) => [
+						Math.min(acc[0], coord[0]),
+						Math.min(acc[1], coord[1]),
+						Math.max(acc[2], coord[0]),
+						Math.max(acc[3], coord[1]),
+					],
+					[Infinity, Infinity, -Infinity, -Infinity]
+				);
 
-			map.fitBounds(
-				[
-					[bounds[0], bounds[1]],
-					[bounds[2], bounds[3]],
-				],
-				{ padding: 100, duration: 1000 }
-			);
+				map.fitBounds(
+					[
+						[bounds[0], bounds[1]],
+						[bounds[2], bounds[3]],
+					],
+					{ padding: 100, duration: 1000 }
+				);
+			} catch (error) {
+				console.error("Error calculating polygon bounds:", error);
+			}
 		} catch (error) {
 			console.error("Error during editing:", error);
 		}
@@ -308,24 +399,23 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 	/**
 	 * Saves polygon to the database
 	 */
-	/**
-	 * Saves polygon to the database
-	 */
 	const handleSavePolygon = async () => {
 		if (!formData.polygon) {
 			console.error("No polygon data to save");
 			return;
 		}
 
-		if (!drawRef.current) {
+		// Check if draw is ready using your existing state
+		if (!isDrawReady) {
 			console.error("Drawing reference is not available");
+			alert("Unable to save: The drawing tool is not ready. Please try again.");
 			return;
 		}
 
 		let updated;
 
 		try {
-			updated = drawRef.current.getAll().features.find(f => f.id === formData.polygon?.id);
+			updated = drawRef?.current?.getAll().features.find(f => f.id === formData.polygon?.id);
 		} catch (error) {
 			console.error("Error accessing draw features:", error);
 			alert(`Could not access drawing data: ${error || "Unknown error"}`);
@@ -342,7 +432,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 			return;
 		}
 		setSavingPolygon(true);
-		// Fix the inconsistency between popupDetails and popUpDetails
+
 		const polygonToSave = {
 			...formData.polygon,
 			coordinates: JSON.stringify(updated.geometry.type === "Polygon" ? updated.geometry.coordinates[0] : []),
@@ -414,7 +504,6 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 	 * Updates polygon metadata without modifying the shape
 	 */
 	const handleFormDataUpdates = async (polygonId: string, updates: Partial<Polygon>) => {
-		console.log("🚀 ~ handleFormDataUpdates ~ updates:", updates);
 		if (!formData.polygon || polygonId !== formData.polygon.id) return;
 
 		const updatedPolygon = {
@@ -423,13 +512,60 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 		};
 
 		updateFormData("polygon", updatedPolygon);
-		// Update visual map feature
-		setFeatures(prev => ({
-			...prev,
-			[updatedPolygon.id]: {
-				...prev[updatedPolygon.id],
-			},
-		}));
+
+		// Update visual map feature with the new styles
+		if (updates.style && drawRef.current) {
+			try {
+				// Update the feature in MapboxDraw to reflect new styles
+				const currentFeatures = drawRef.current.getAll().features;
+				const featureToUpdate = currentFeatures.find(f => f.id === polygonId);
+
+				if (featureToUpdate) {
+					// Update the feature's properties with the new style
+					featureToUpdate.properties = {
+						...featureToUpdate.properties,
+						style: updatedPolygon.style,
+					};
+
+					// Also update our local features state
+					// @ts-expect-error: The 'setFeatures' function expects a specific type
+					setFeatures(prev => ({
+						...prev,
+						[polygonId]: {
+							...prev[polygonId],
+							properties: featureToUpdate.properties,
+						},
+					}));
+
+					// Update the Source component's style properties
+					updateMapDisplayStyle(updatedPolygon.style);
+				}
+			} catch (err) {
+				console.error("Error updating feature style:", err);
+			}
+		}
+	};
+
+	/**
+	 * Update the map display style for the polygon
+	 */
+	const updateMapDisplayStyle = (style: any) => {
+		if (!mapRef.current) return;
+
+		const map = mapRef.current.getMap();
+		if (!map || !map.isStyleLoaded()) return;
+
+		// Update fill layer
+		if (map.getLayer("polygon-fill")) {
+			map.setPaintProperty("polygon-fill", "fill-color", style.fillColor || "#d32f2f");
+			map.setPaintProperty("polygon-fill", "fill-opacity", style.fillOpacity || 0.5);
+		}
+
+		// Update outline layer
+		if (map.getLayer("polygon-outline")) {
+			map.setPaintProperty("polygon-outline", "line-color", style.lineColor || "#3B82F6");
+			map.setPaintProperty("polygon-outline", "line-width", style.lineWidth || 2);
+		}
 	};
 
 	/**
@@ -494,6 +630,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 			return false;
 		}
 	};
+
 	/**
 	 * Clears drawn features from the map
 	 */
@@ -502,7 +639,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 
 		try {
 			const map = mapRef.current.getMap();
-			if (!map || !map.loaded()) return;
+			if (!map || !map.isStyleLoaded()) return;
 
 			// Remove layers first
 			if (map.getLayer("polygon-fill")) {
@@ -521,27 +658,32 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 		}
 	};
 
-	// Clean up map layers on unmount
-	useEffect(() => {
-		const map = mapRef.current?.getMap();
-		return () => {
-			if (map?.getLayer("polygon-layer")) map.removeLayer("polygon-layer");
-			if (map?.getSource("polygon")) map.removeSource("polygon");
-		};
-	}, []);
+	/**
+	 * Initialize MapboxDraw instance
+	 */
+	const initializeDrawTool = useCallback(() => {
+		if (!mapRef.current) return;
 
-	// Initialize MapboxDraw and set up event listeners
-	useEffect(() => {
-		if (!mapLoaded || !styleLoaded || !mapRef.current) return;
+		const map = mapRef.current.getMap();
+		if (!map || !map.isStyleLoaded()) {
+			console.log("Map not ready for draw initialization");
+			return;
+		}
 
+		// Remove existing draw control if present
+		if (drawRef.current && map.hasControl(drawRef.current)) {
+			map.removeControl(drawRef.current);
+		}
+
+		console.log("Initializing draw control");
 		const draw = new MapboxDraw({
 			displayControlsDefault: false,
 			controls: { polygon: mode === MODES.DRAW, trash: true },
 		});
 
-		const map = mapRef.current.getMap();
 		map.addControl(draw);
 		drawRef.current = draw;
+		setIsDrawReady(true);
 
 		// Add existing polygon to map if one exists
 		if (formData.polygon) {
@@ -555,13 +697,13 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 						name: formData.polygon.name,
 						style: {
 							id: formData.polygon.style?.id || `style-${formData.polygon.id}`,
-							fillColor: formData.polygon.style?.fillColor || null,
+							fillColor: formData.polygon.style?.fillColor || "#d32f2f",
 							hoverFillColor: formData.polygon.style?.hoverFillColor || null,
-							fillOpacity: formData.polygon.style?.fillOpacity || null,
+							fillOpacity: formData.polygon.style?.fillOpacity || 0.5,
 							hoverFillOpacity: formData.polygon.style?.hoverFillOpacity || null,
-							lineColor: formData.polygon.style?.lineColor || null,
-							lineWidth: formData.polygon.style?.lineWidth || null,
-							lineDashArray: formData.polygon.style?.lineDashArray || null,
+							lineColor: formData.polygon.style?.lineColor || "#3B82F6",
+							lineWidth: formData.polygon.style?.lineWidth || 2,
+							lineDashArray: formData.polygon.style?.lineDashArray || [2, 2],
 							polygonId: formData.polygon.id,
 							lineOpacity: formData.polygon.style?.lineOpacity || 1,
 							createdAt: formData.polygon.style?.createdAt || new Date(),
@@ -569,6 +711,8 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 						},
 					},
 				};
+
+				// Add feature to draw instance
 				// @ts-expect-error: The 'add' method expects a specific type, but we are passing a custom feature object.
 				draw.add(feature);
 				draw.changeMode("simple_select", { featureIds: [feature.id] });
@@ -596,6 +740,9 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 						duration: 1000,
 					}
 				);
+
+				// Update map display with polygon styles
+				updateMapDisplayStyle(formData.polygon.style);
 			} catch (err) {
 				console.error("Failed to parse polygon coordinates", err);
 			}
@@ -605,37 +752,66 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 		map.on("draw.create", handleCreateDrawing);
 		map.on("draw.update", handleUpdateDrawing);
 		map.on("draw.delete", handleDeleteDrawing);
+	}, [formData.polygon, handleCreateDrawing, handleDeleteDrawing, handleUpdateDrawing, mode]);
 
-		// Clean up function
+	// Clean up map layers on unmount
+	useEffect(() => {
 		return () => {
-			if (map.hasControl(draw)) {
-				map.removeControl(draw);
-				drawRef.current = null;
-			}
+			const map = mapRef.current?.getMap();
+
+			if (!map) return;
+
+			// Clean up event listeners
 			map.off("draw.create", handleCreateDrawing);
 			map.off("draw.update", handleUpdateDrawing);
 			map.off("draw.delete", handleDeleteDrawing);
 
-			try {
-				if (mapRef.current && drawRef.current) {
-					const map = mapRef.current.getMap();
-					// Make sure the map is loaded before trying to remove controls
-					if (map && map.loaded() && map.hasControl(drawRef.current)) {
-						map.removeControl(drawRef.current);
-					}
-				}
-				drawRef.current = null;
-			} catch (error) {
-				console.error("Error cleaning up map controls:", error);
+			// Remove layers and sources
+			if (map.getLayer("polygon-fill")) map.removeLayer("polygon-fill");
+			if (map.getLayer("polygon-outline")) map.removeLayer("polygon-outline");
+			if (map.getSource("polygon-source")) map.removeSource("polygon-source");
+
+			// Clean up draw control
+			if (drawRef.current && map.hasControl(drawRef.current)) {
+				map.removeControl(drawRef.current);
 			}
 		};
-	}, [mapLoaded, styleLoaded, mode]);
+	}, [handleCreateDrawing, handleDeleteDrawing, handleUpdateDrawing]);
+
+	// Initialize MapboxDraw and set up event listeners when map and style are loaded
+	useEffect(() => {
+		if (mapLoaded && styleLoaded && !mapInitialized && showEditor) {
+			// Let the map styles finish loading before initializing the draw tool
+			const timer = setTimeout(() => {
+				initializeDrawTool();
+				setMapInitialized(true);
+			}, 500);
+
+			return () => clearTimeout(timer);
+		}
+	}, [mapLoaded, styleLoaded, mapInitialized, showEditor, initializeDrawTool]);
+
+	// Re-initialize draw tool when entering edit mode
+	useEffect(() => {
+		if (showEditor && mapLoaded && styleLoaded) {
+			// Use a timeout to ensure the map is fully loaded
+			const timer = setTimeout(() => {
+				console.log("Initializing draw tool after editor opened");
+				initializeDrawTool();
+				setMapInitialized(true);
+			}, 1000);
+
+			return () => clearTimeout(timer);
+		}
+	}, [showEditor, mapLoaded, styleLoaded, initializeDrawTool]);
 
 	// Update draw mode when mode or editingId changes
 	useEffect(() => {
 		const draw = drawRef.current;
-		if (!draw || !mapRef.current?.getMap().hasControl(draw)) return;
+		const map = mapRef.current?.getMap();
+		if (!draw || !map?.hasControl(draw)) return;
 
+		console.log("Updating draw mode to", mode);
 		switch (mode) {
 			case MODES.DRAW:
 				draw.changeMode("draw_polygon");
@@ -646,7 +822,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 			default:
 				draw.changeMode("simple_select");
 		}
-	}, [mode, editingId, showEditor]);
+	}, [mode, editingId]);
 
 	// Check if polygon has been modified
 	useEffect(() => {
@@ -654,12 +830,32 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 		setCanSave(changed);
 	}, [formData, features]);
 
-	// Check if draw is ready
+	// Add Google Satellite layer when map is ready
 	useEffect(() => {
-		if (drawRef.current && typeof drawRef.current.getAll === "function") {
-			setIsDrawReady(true);
+		if (mapLoaded && styleLoaded) {
+			const timer = setTimeout(() => {
+				addGoogleSatellite();
+			}, 500);
+			return () => clearTimeout(timer);
 		}
-	}, [drawRef.current]);
+	}, [mapLoaded, styleLoaded, addGoogleSatellite]);
+
+	// A separate effect to check if draw reference is lost and reinitialize if needed
+	useEffect(() => {
+		// Only check when editor is open and we've already initialized once
+		if (showEditor && mapInitialized && mapRef.current?.getMap()) {
+			const checkTimer = setInterval(() => {
+				// If we have a map but no draw control or it's not attached, reinitialize
+				const map = mapRef.current?.getMap();
+				if (map && (!drawRef.current || !map.hasControl(drawRef.current))) {
+					console.log("Draw control lost or detached, reinitializing");
+					initializeDrawTool();
+				}
+			}, 5000); // Check every 5 seconds
+
+			return () => clearInterval(checkTimer);
+		}
+	}, [showEditor, mapInitialized, initializeDrawTool]);
 
 	return (
 		<Box>
@@ -681,24 +877,11 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 						variant="contained"
 						onClick={() => {
 							setShowEditor(true);
+							setMapInitialized(false); // Reset initialization flag to trigger re-initialization
 
-							// Refresh the drawn polygon to ensure it's the latest
-							if (formData.polygon) {
-								debugger;
-								const coords = JSON.parse(formData.polygon.coordinates);
-								const feature: Feature = {
-									id: formData.polygon.id,
-									type: "Feature",
-									geometry: { type: "Polygon", coordinates: [coords] },
-									properties: {
-										name: formData.polygon.name,
-										type: formData.polygon.type,
-										description: formData.polygon.description,
-										image: formData.polygon.popupDetails?.image,
-									},
-								};
-								setFeatures({ [feature.id]: feature });
-							}
+							// Reset states to ensure clean start
+							setIsDrawReady(false);
+							setFeatures({});
 						}}>
 						{hasPolygon ? "Edit Polygon" : "Add Polygon"}
 					</Button>
@@ -714,13 +897,26 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 							initialViewState={viewport}
 							mapStyle="mapbox://styles/hanyrabah/clreumh3d00e501pid3g47uqu"
 							mapboxAccessToken={MAPBOX_TOKEN}
-							onLoad={() => {
+							onLoad={e => {
+								console.log("Map loaded event fired");
 								setMapLoaded(true);
-								addGoogleSatellite();
+
+								// Try to add satellite immediately on load
+								setTimeout(() => {
+									if (e.target && e.target.isStyleLoaded()) {
+										console.log("Adding Google layer on initial map load");
+										addGoogleSatellite();
+									}
+								}, 500);
 							}}
 							onStyleData={() => {
-								// Style is now loaded
+								console.log("Map style data loaded");
 								setStyleLoaded(true);
+
+								// Try adding the layer when style data loads
+								if (mapRef.current?.getMap()) {
+									setTimeout(() => addGoogleSatellite(), 300);
+								}
 							}}
 							onMove={e => setViewport(e.viewState)}>
 							<MapSearchBox flyTo={center => mapRef.current?.flyTo({ center, zoom: 14, duration: 2000 })} />
@@ -732,11 +928,21 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 										id="polygon-source"
 										type="geojson"
 										data={{ type: "FeatureCollection", features: Object.values(features) }}>
-										<Layer id="polygon-fill" type="fill" paint={{ "fill-color": "#d32f2f", "fill-opacity": 0.5 }} />
+										<Layer
+											id="polygon-fill"
+											type="fill"
+											paint={{
+												"fill-color": formData.polygon?.style?.fillColor || "#d32f2f",
+												"fill-opacity": formData.polygon?.style?.fillOpacity || 0.5,
+											}}
+										/>
 										<Layer
 											id="polygon-outline"
 											type="line"
-											paint={{ "line-color": "#3B82F6", "line-width": 2, "line-dasharray": [2, 2] }}
+											paint={{
+												"line-color": formData.polygon?.style?.lineColor || "#3B82F6",
+												"line-width": formData.polygon?.style?.lineWidth || 2,
+											}}
 										/>
 									</Source>
 								</ErrorBoundary>
@@ -767,7 +973,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 
 								{/* Delete button for existing polygons */}
 								{polygons?.coordinates && (
-									<Button variant="outlined" startIcon={<DeleteIcon />} onClick={handleDeletePolygon}>
+									<Button variant="outlined" startIcon={<DeleteIcon />} onClick={handleDeletePolygon} sx={{ mb: 2 }}>
 										Delete
 									</Button>
 								)}
@@ -777,6 +983,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 									polygon={formData.polygon}
 									EditPolygonPoints={handleEditPolygon}
 									handleFormDataUpdates={handleFormDataUpdates}
+									isEditing={mode === MODES.EDIT}
 								/>
 
 								{/* Action buttons */}
@@ -813,7 +1020,7 @@ export default function DrawPolygon({ polygons }: { polygons?: any }) {
 										fullWidth
 										variant="contained"
 										onClick={handleSavePolygon}
-										disabled={!canSave || savingPolygon}>
+										disabled={!canSave || savingPolygon || !isDrawReady}>
 										{savingPolygon ? <CircularProgress size={24} /> : "Save Changes"}
 									</Button>
 								</Box>

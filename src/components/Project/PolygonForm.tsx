@@ -1,4 +1,4 @@
-// Refactored DrawPolygon Component
+//
 "use client";
 
 import { MAP_CONFIG, MAPBOX_TOKEN } from "@/constants/mapConstants";
