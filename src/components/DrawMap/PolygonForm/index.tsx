@@ -1,9 +1,7 @@
 // components/DrawMap/PolygonForm/index.tsx
 import { Polygon } from "@/types/projects";
-import { GeoJsonPolygon } from "@/utils/coordinates";
 import { Button, FormControl, FormLabel, Radio, RadioGroup, Slider } from "@mui/material";
 import Box from "@mui/material/Box";
-import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Grid from "@mui/material/Grid2";
 import Tab from "@mui/material/Tab";
@@ -21,7 +19,6 @@ interface PolygonStyle {
 	lineColor?: string;
 	lineWidth?: number;
 	lineDashArray?: string;
-	noHover?: boolean;
 }
 
 interface PolygonFormProps {
@@ -100,6 +97,17 @@ const PolygonForm: React.FC<PolygonFormProps> = ({ polygon, handlePolygonUpdate,
 		}
 	};
 
+	// format the coordinates to a more readable format
+	const formatCoordinates = (GeoJson: { coordinates: string }) => {
+		return JSON.parse(GeoJson.coordinates).map((coord: number[]) => {
+			return coord.map((point: number) => {
+				return point.toFixed(6);
+			});
+		});
+	};
+	const formattedCoordinates = formatCoordinates({ coordinates: polygon.coordinates });
+	const formattedCoordinatesString = JSON.stringify(formattedCoordinates, null, 2);
+
 	return (
 		<Box sx={{ width: "100%", mt: 2 }}>
 			<Box sx={{ borderBottom: 1, borderColor: "divider" }}>
@@ -139,7 +147,7 @@ const PolygonForm: React.FC<PolygonFormProps> = ({ polygon, handlePolygonUpdate,
 			{/* Style Tab */}
 			<TabPanel value={activeTab} index={1}>
 				<Grid container spacing={2}>
-					{polygon.type === ("Polygon" as unknown as GeoJsonPolygon) && (
+					{polygon.type === "Polygon" && (
 						<>
 							<Grid size={{ xs: 12, sm: 6 }}>
 								<TextField
@@ -202,17 +210,6 @@ const PolygonForm: React.FC<PolygonFormProps> = ({ polygon, handlePolygonUpdate,
 							label="Line Width"
 							value={polygon.style?.lineWidth || 1}
 							onChange={e => updatePolygonStyles({ lineWidth: parseInt(e.target.value) })}
-						/>
-					</Grid>
-					<Grid size={{ xs: 12 }}>
-						<FormControlLabel
-							control={
-								<Checkbox
-									checked={polygon.style?.noHover || false}
-									onChange={e => updatePolygonStyles({ noHover: e.target.checked })}
-								/>
-							}
-							label="Disable Hover Effects"
 						/>
 					</Grid>
 				</Grid>
@@ -373,10 +370,10 @@ const PolygonForm: React.FC<PolygonFormProps> = ({ polygon, handlePolygonUpdate,
 								backgroundColor: "grey.100",
 								p: 2,
 								borderRadius: 1,
-								maxHeight: "200px",
+								maxHeight: "400px",
 								overflow: "auto",
 							}}>
-							<pre style={{ margin: 0, fontSize: "0.875rem" }}>{JSON.stringify(polygon.coordinates, null, 2)}</pre>
+							<pre style={{ margin: 0, fontSize: "0.875rem" }}>{formattedCoordinatesString}</pre>
 						</Box>
 					</Grid>
 				</Grid>

@@ -1,9 +1,10 @@
 // components/GlobeMap/index.tsx
 "use client";
-import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
 import Loader from "@/components/Loader";
+import { MAP_CONFIG, MAPBOX_TOKEN } from "@/constants/mapConstants";
 import { ANIMATION_CONFIG } from "@/styles/mapStyles";
 import { Project } from "@/types/project";
+import { Client } from "@prisma/client";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import Map, { Layer, MapRef, Source } from "react-map-gl";
@@ -28,7 +29,6 @@ type MapAction =
 
 // Dynamic imports
 const ProjectPolygons = dynamic(() => import("@/components/GlobeProjects/ProjectPolygons"), { ssr: false });
-const ProjectsMarker = dynamic(() => import("@/components/GlobeProjects/ProjectMarker"), { ssr: false });
 const ClusteredMarkers = dynamic(() => import("@/components/GlobeProjects/ClusteredMarkers"), { ssr: false });
 const MeteorBackground = dynamic(() => import("./MeteorBackground"), {
 	ssr: false,
@@ -51,13 +51,14 @@ function mapReducer(state: MapState, action: MapAction): MapState {
 }
 
 type GlobeMapProps = {
+	client: Client | null;
 	projects: Project[];
 	projectsLoading: boolean;
 	selectedProject: Project | null;
 	setSelectedProject: (project: Project | null) => void;
 };
 
-const GlobeMap = ({ projects, projectsLoading, selectedProject, setSelectedProject }: GlobeMapProps) => {
+const GlobeMap = ({ client, projects, projectsLoading, selectedProject, setSelectedProject }: GlobeMapProps) => {
 	const mapRef = useRef<MapRef>(null);
 	const [showMarkers, setShowMarkers] = useState(false);
 	const [showPolygons, setShowPolygons] = useState(false);
@@ -67,11 +68,17 @@ const GlobeMap = ({ projects, projectsLoading, selectedProject, setSelectedProje
 	const prevZoomRef = useRef<number | null>(null);
 	const [zoomLevel, setZoomLevel] = useState<number>(2);
 
+	const initialViewState = {
+		...MAP_CONFIG.initialViewState,
+		longitude: client?.lng || MAP_CONFIG.initialViewState.longitude,
+		latitude: client?.lat || MAP_CONFIG.initialViewState.latitude,
+	};
+
 	const [state, dispatch] = useReducer(mapReducer, {
 		showText: true,
 		mapLoaded: false,
 		showGoogleLayer: true,
-		viewState: MAP_CONFIG.initialViewState,
+		viewState: initialViewState,
 	});
 
 	// Handle zoom changes
@@ -113,7 +120,7 @@ const GlobeMap = ({ projects, projectsLoading, selectedProject, setSelectedProje
 		if (!map) return;
 
 		map.flyTo({
-			center: [MAP_CONFIG.initialViewState.longitude, MAP_CONFIG.initialViewState.latitude],
+			center: [initialViewState.longitude, initialViewState.latitude],
 			zoom: 2,
 			duration: 3000,
 		});
@@ -284,6 +291,18 @@ const GlobeMap = ({ projects, projectsLoading, selectedProject, setSelectedProje
 		}
 	}, [setShowMarkers, projects]);
 
+	// update map center when client is loaded
+	useEffect(() => {
+		if (client && mapRef.current) {
+			const map = mapRef.current.getMap();
+			map.flyTo({
+				center: [client.lng, client.lat],
+				zoom: 2,
+				duration: 3000,
+			});
+		}
+	}, [client]);
+
 	return (
 		<div className="m-0" id="map-page">
 			{showMeteor && <MeteorBackground />}
@@ -291,7 +310,7 @@ const GlobeMap = ({ projects, projectsLoading, selectedProject, setSelectedProje
 			<div className="absolute top-0 h-screen w-full z-0">
 				<Map
 					ref={mapRef}
-					initialViewState={MAP_CONFIG.initialViewState}
+					initialViewState={initialViewState}
 					mapStyle="mapbox://styles/hanyrabah/clreumh3d00e501pid3g47uqu"
 					mapboxAccessToken={MAPBOX_TOKEN}
 					onLoad={handleMapLoad}

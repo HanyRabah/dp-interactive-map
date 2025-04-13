@@ -1,16 +1,15 @@
-
 // export type MapConfig = {
 //     style: string;
 //     projection: string;
 //     center: [number, number];
 //     zoom: number;
 //   }
-  
+
 //   export type FeatureCollection = {
 //     type: 'FeatureCollection';
 //     features: MapFeature[];
 //   }
-  
+
 //   export interface MapStyle {
 //     background?: {
 //       type: 'line';
@@ -52,7 +51,6 @@
 //     lng: number;
 //     lat: number;
 //     hiddenAnchor: boolean;
-//     noHover: boolean;
 //     description?: string;
 //     image?: string;
 //     url?: string;
@@ -64,11 +62,11 @@
 //     type: 'Polygon' | 'LineString';
 //     coordinates: number[][][] | number[][];
 //   };
-  
+
 //   export interface MapFeature {
 //     type: 'Feature';
 //     properties: FeatureProperties;
 //     geometry: FeatureGeometry;
 //   }
-  
+
 //   // Add other types as needed

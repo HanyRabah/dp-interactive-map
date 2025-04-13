@@ -490,28 +490,10 @@ const ProjectPolygons = ({
 						properties: {},
 						geometry: routeInfo[routeInfo.activeMode]!.geometry,
 					}}>
-					{/* <Layer
-            id="route-line"
-            type="line"
-            paint={{
-              'line-color': routeInfo.activeMode === 'driving' ? '#4299e1' : '#48bb78',
-              'line-width': 3,
-              'line-opacity': 0.8
-            }}
-          /> */}
 					<RouteLineAnimation routeInfo={routeInfo} />
 				</Source>
 			)}
 			{nearbyPois.length && <POIFilterPanel pois={nearbyPois} onPOIClick={handlePOIClick} project={project} />}
-			{/* <POIPanel
-        pois={nearbyPois}
-        selectedPOI={selectedPOI}
-        onPOIClick={handlePOIClick}
-        routeInfo={routeInfo}
-        projectCenter={project ? geoUtils.getPolygonCenter(
-          JSON.parse(project.polygon!.coordinates)
-        ) : null}
-      /> */}
 		</>
 	);
 };

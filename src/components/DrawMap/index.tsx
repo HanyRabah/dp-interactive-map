@@ -1,12 +1,12 @@
 // components/DrawMap/index.tsx
 "use client";
-import { MAP_CONFIG, MAPBOX_TOKEN } from "@/app/constants/mapConstants";
+import { MAP_CONFIG, MAPBOX_TOKEN } from "@/constants/mapConstants";
 import useProjects from "@/hooks/useProjects";
 import { Marker as MarkerType, Mode, MODES } from "@/types/drawMap";
 import { Feature as MapFeature } from "@/types/map";
 import { Project } from "@/types/project";
 import { Polygon } from "@/types/projects";
-import { GeoJsonPolygon } from "@/utils/coordinates";
+import { GeoJsonGeometry, GeoJsonPolygon } from "@/utils/coordinates";
 import AddIcon from "@mui/icons-material/Add";
 import { CircularProgress, List, Snackbar } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
@@ -154,7 +154,7 @@ export default function DrawMap() {
 			const newPolygon: Polygon = {
 				id: `polygon-${Date.now()}`,
 				name: `New ${feature.geometry.type}`,
-				type: feature.geometry.type,
+				type: feature.geometry.type as unknown as "Polygon" | "MultiPolygon" | "Point" | "LineString",
 				coordinates: JSON.stringify(feature.geometry.coordinates[0]),
 				projectId: formData.id,
 				style:
@@ -164,13 +164,15 @@ export default function DrawMap() {
 								hoverFillColor: "#333333",
 								fillOpacity: 0.5,
 								hoverFillOpacity: 0.7,
-								noHover: false,
+								lineColor: "#000000", // Default values for required properties
+								lineWidth: 1,
 						  }
 						: {
 								lineColor: "#3B82F6",
 								lineWidth: 2,
 								lineDashArray: "2,2",
-								noHover: false,
+								fillColor: "#000000", // Default values for required properties
+								fillOpacity: 0,
 						  },
 			};
 
@@ -351,7 +353,7 @@ export default function DrawMap() {
 			const feature: MapFeature = {
 				type: "Feature",
 				geometry: {
-					type: polygonToEdit.type,
+					type: polygonToEdit.type as unknown as GeoJsonGeometry,
 					coordinates: JSON.stringify(polygonToEdit.type) === "Polygon" ? [coordinates] : coordinates,
 				},
 				properties: {
@@ -667,14 +669,15 @@ export default function DrawMap() {
 							</Box>
 						) : (
 							<List>
-								{projects.map(project => (
-									<ProjectCard
-										key={project.id}
-										project={project}
-										onEdit={() => handleEditProject(project)}
-										onDelete={() => handleDeleteProject(project.id)}
-									/>
-								))}
+								{projects.length &&
+									projects.map(project => (
+										<ProjectCard
+											key={project.id}
+											project={project}
+											onEdit={() => handleEditProject(project)}
+											onDelete={() => handleDeleteProject(project.id)}
+										/>
+									))}
 							</List>
 						)}
 					</Box>
