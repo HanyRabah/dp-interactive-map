@@ -133,7 +133,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, project }: ProjectDetailsModalPr
 
 							{/* Icons Section */}
 							<div className="flex justify-around items-center p-4 border-t border-gray-200">
-								{project.polygon.popupDetails.videoLink && (
+								{project.polygon.popupDetails.ariealLink && (
 									<button
 										className="flex flex-col items-center text-gray-600 hover:text-black transition-colors"
 										onClick={() => {
